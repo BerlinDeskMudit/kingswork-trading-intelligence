@@ -1,7 +1,8 @@
 import { lazy, type ComponentType, type LazyExoticComponent } from "react"
-import { paths } from "@/routes/paths"
+import { dashboardSections, paths, type DashboardSectionId } from "@/routes/paths"
 
 type LazyPage = LazyExoticComponent<ComponentType<object>>
+type LazyDashboardPage = LazyExoticComponent<ComponentType<{ sectionId: DashboardSectionId }>>
 
 export type AppRouteConfig = {
   id: string
@@ -17,6 +18,13 @@ const Dashboard = lazy(() => import("@/pages/Dashboard"))
 const Docs = lazy(() => import("@/pages/Docs"))
 const NotFound = lazy(() => import("@/pages/NotFound"))
 
+export type DashboardRouteConfig = {
+  id: DashboardSectionId
+  path: DashboardSectionId
+  label: string
+  Component: LazyDashboardPage
+}
+
 export const routeConfig = {
   root: { id: "home", path: paths.home, access: "open", Component: Landing },
   open: [
@@ -27,12 +35,15 @@ export const routeConfig = {
     { id: "login", path: paths.login, access: "public", Component: Login },
     { id: "signup", path: paths.signup, access: "public", Component: Signup },
   ],
-  auth: [
-    { id: "dashboard-section", path: `${paths.dashboard}/:section`, access: "auth", Component: Dashboard },
-  ],
-} satisfies {
-  root: AppRouteConfig
-  open: AppRouteConfig[]
-  public: AppRouteConfig[]
-  auth: AppRouteConfig[]
+  dashboard: {
+    id: "dashboard",
+    path: paths.dashboard,
+    access: "auth" as const,
+    children: dashboardSections.map(({ id, label, path }) => ({
+      id,
+      label,
+      path,
+      Component: Dashboard,
+    })) satisfies DashboardRouteConfig[],
+  },
 }

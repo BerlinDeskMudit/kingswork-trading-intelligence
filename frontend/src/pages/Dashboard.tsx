@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Navigate, useLocation, useNavigate, useParams } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -102,7 +102,7 @@ import {
   changePassword,
 } from "@/services/api.ts"
 import { cn, formatPrice, formatVolume } from "@/lib/utils"
-import { dashboardSections, isDashboardSection, paths, type DashboardSectionId } from "@/routes/paths"
+import { dashboardSections, paths, type DashboardSectionId } from "@/routes/paths"
 
 type Mode = "live" | "backtesting"
 type MarketKey = "us" | "nse" | "bse"
@@ -717,15 +717,13 @@ function TourOverlay({
   )
 }
 
-export default function Dashboard() {
+export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId }) {
   const { user, logout, streakData, setStreakData } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const { section } = useParams<{ section?: string }>()
   const mainScrollRef = useRef<HTMLElement | null>(null)
   const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search])
-  const requestedTab = isDashboardSection(section) ? section : null
-  const activeTab: DashTab = requestedTab || "overview"
+  const activeTab: DashTab = sectionId
   const [mode, setMode] = useState<Mode>(() => (queryParams.get("mode") === "backtesting" ? "backtesting" : "live"))
   const [market, setMarket] = useState<MarketKey>(() => {
     const candidate = queryParams.get("market")
@@ -1449,10 +1447,6 @@ export default function Dashboard() {
       icon: Newspaper,
     },
   ]
-
-  if (section && !requestedTab) {
-    return <Navigate to={paths.notFound} replace />
-  }
 
   return (
     <div className="flex h-screen bg-background text-foreground overflow-hidden">

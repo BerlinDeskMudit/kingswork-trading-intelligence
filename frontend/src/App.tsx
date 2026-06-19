@@ -1,5 +1,5 @@
 import { Suspense } from "react"
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom"
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom"
 import { AuthProvider, useAuth } from "@/lib/auth-context"
 import { routeConfig } from "@/routes/config"
 import { LoadingScreen, ProtectedRoute, PublicRoute } from "@/routes/guards"
@@ -42,25 +42,19 @@ export default function App() {
             ))}
 
             <Route
-              path={paths.dashboard}
+              path={routeConfig.dashboard.path}
               element={
                 <ProtectedRoute>
-                  <DashboardIndexRedirect />
+                  <Outlet />
                 </ProtectedRoute>
               }
-            />
-
-            {routeConfig.auth.map(({ id, path, Component }) => (
-              <Route
-                key={id}
-                path={path}
-                element={
-                  <ProtectedRoute>
-                    <Component />
-                  </ProtectedRoute>
-                }
-              />
-            ))}
+            >
+              <Route index element={<DashboardIndexRedirect />} />
+              {routeConfig.dashboard.children.map(({ id, path, Component }) => (
+                <Route key={id} path={path} element={<Component sectionId={id} />} />
+              ))}
+              <Route path="*" element={<Navigate to={paths.notFound} replace />} />
+            </Route>
 
             <Route path="*" element={<Navigate to={paths.notFound} replace />} />
           </Routes>
