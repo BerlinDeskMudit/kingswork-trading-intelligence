@@ -1,0 +1,106 @@
+.signals-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  gap: 1rem;
+  color: var(--text-secondary);
+}
+
+.signals-header {
+  margin-bottom: 1.5rem;
+}
+.signals-header h1 { font-size: 1.75rem; font-weight: 700; }
+.signals-subtitle { color: var(--text-secondary); margin-top: 0.25rem; }
+
+.signals-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.sig-stat {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.buy-stat svg { color: var(--accent-green); }
+.neutral-stat svg { color: var(--text-muted); }
+.sell-stat svg { color: var(--accent-red); }
+
+.sig-stat-label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.sig-stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+.buy-stat .sig-stat-value { color: var(--accent-green); }
+.sell-stat .sig-stat-value { color: var(--accent-red); }
+
+.signals-group {
+  margin-bottom: 2rem;
+}
+.signals-group h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.empty-group {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 0.5rem 0;
+}
+
+.signal-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 0.5rem;
+}
+.signal-card:hover {
+  border-color: var(--accent-blue);
+  transform: translateX(4px);
+}
+
+.signal-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.signal-card-header h4 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.signal-card-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.signal-price {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.signal-confidence {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
