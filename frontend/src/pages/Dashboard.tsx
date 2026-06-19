@@ -62,6 +62,7 @@ import BonusModal from "@/components/engagement/BonusModal"
 import AchievementsPanel from "@/components/engagement/AchievementsPanel"
 import DailyChallengesPanel from "@/components/engagement/DailyChallengesPanel"
 import WatchlistPanel from "@/components/WatchlistPanel"
+import FirstVisitWelcome from "@/features/onboarding/FirstVisitWelcome"
 import {
   Area,
   AreaChart,
@@ -752,6 +753,10 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
   const [error, setError] = useState("")
   const [tourStep, setTourStep] = useState(0)
   const [tourOpen, setTourOpen] = useState(false)
+  const firstVisitKey = `kingstop_first_visit_${user?.id ?? "anonymous"}`
+  const [showFirstVisitWelcome, setShowFirstVisitWelcome] = useState(
+    () => localStorage.getItem(firstVisitKey) !== "complete",
+  )
 
   // Screener
   const [screenerMarket, setScreenerMarket] = useState("us")
@@ -839,6 +844,10 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
     const timer = window.setInterval(() => setTime(new Date()), 1000)
     return () => window.clearInterval(timer)
   }, [])
+
+  useEffect(() => {
+    if (showFirstVisitWelcome) localStorage.setItem(firstVisitKey, "complete")
+  }, [firstVisitKey, showFirstVisitWelcome])
 
   useEffect(() => {
     const scrollElement = mainScrollRef.current
@@ -1449,7 +1458,13 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
   ]
 
   return (
-    <div className="flex h-screen bg-background text-foreground overflow-hidden">
+    <>
+      <AnimatePresence>
+        {showFirstVisitWelcome ? (
+          <FirstVisitWelcome onComplete={() => setShowFirstVisitWelcome(false)} />
+        ) : null}
+      </AnimatePresence>
+      <div className="flex h-screen bg-background text-foreground overflow-hidden">
       <OnboardingWizard
         userId={user?.id}
         open={tourOpen}
@@ -3253,6 +3268,7 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
         </div>
         </main>
       </div>
-    </div>
+      </div>
+    </>
   )
 }
