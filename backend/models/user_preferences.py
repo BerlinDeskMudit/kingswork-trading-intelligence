@@ -32,6 +32,7 @@ class UserAccountPreference(Base):
     resolution_alerts = Column(Boolean, default=True)
     price_alerts = Column(Boolean, default=True)
     streak_reminders = Column(Boolean, default=True)
+    keyboard_shortcuts_enabled = Column(Boolean, default=True, nullable=False)
     daily_funding_limit = Column(Float, nullable=True)
     exposure_limit = Column(Float, nullable=True)
     onboarding_completed = Column(Boolean, default=False, nullable=False)

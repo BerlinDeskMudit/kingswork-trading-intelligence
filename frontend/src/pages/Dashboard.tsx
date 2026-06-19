@@ -19,6 +19,8 @@ import {
   Globe2,
   LineChart,
   Loader2,
+  Menu,
+  Command,
   LogOut,
   Play,
   RadioTower,
@@ -64,6 +66,17 @@ import DailyChallengesPanel from "@/components/engagement/DailyChallengesPanel"
 import WatchlistPanel from "@/components/WatchlistPanel"
 import FirstVisitWelcome from "@/features/onboarding/FirstVisitWelcome"
 import FirstActionCard from "@/features/onboarding/FirstActionCard"
+import DashboardNavigation from "@/features/navigation/DashboardNavigation"
+import CommandPalette from "@/features/navigation/CommandPalette"
+import { dashboardNavigationItems } from "@/features/navigation/navigation-items"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   Area,
   AreaChart,
@@ -104,7 +117,7 @@ import {
   changePassword,
 } from "@/services/api.ts"
 import { cn, formatPrice, formatVolume } from "@/lib/utils"
-import { dashboardSections, paths, type DashboardSectionId } from "@/routes/paths"
+import { paths, type DashboardSectionId } from "@/routes/paths"
 
 type Mode = "live" | "backtesting"
 type MarketKey = "us" | "nse" | "bse"
@@ -203,6 +216,7 @@ type AccountPreferences = {
   resolutionAlerts: boolean
   priceAlerts: boolean
   streakReminders: boolean
+  keyboardShortcutsEnabled: boolean
   dailyFundingLimit: number | null
   exposureLimit: number | null
 }
@@ -437,22 +451,6 @@ const marketOptions: Array<{ id: MarketKey; label: string; description: string }
   { id: "bse", label: "BSE", description: "India BSE" },
 ]
 
-const sectionIconMap: Record<DashTab, LucideIcon> = {
-  overview: BarChart3,
-  screener: Filter,
-  news: Newspaper,
-  crypto: Bitcoin,
-  leaderboard: Trophy,
-  journal: PenLine,
-  predict: TrendingUpIcon,
-  analytics: BarChart3,
-  portfolio: Wallet,
-  wallet: CreditCard,
-  settings: Settings,
-  marketplace: Sparkles,
-  social: Globe2,
-}
-
 const defaultAccountPreferences: AccountPreferences = {
   leaderboardOptIn: false,
   publicProfile: false,
@@ -460,6 +458,7 @@ const defaultAccountPreferences: AccountPreferences = {
   resolutionAlerts: true,
   priceAlerts: true,
   streakReminders: true,
+  keyboardShortcutsEnabled: true,
   dailyFundingLimit: null,
   exposureLimit: null,
 }
@@ -755,6 +754,8 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
   const [error, setError] = useState("")
   const [tourStep, setTourStep] = useState(0)
   const [tourOpen, setTourOpen] = useState(false)
+  const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false)
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const firstVisitKey = `kingstop_first_visit_${user?.id ?? "anonymous"}`
   const [showFirstVisitWelcome, setShowFirstVisitWelcome] = useState(
     () => localStorage.getItem(firstVisitKey) !== "complete",
@@ -1475,71 +1476,36 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
         onNavigate={setActiveTab}
         onComplete={() => setTourOpen(false)}
       />
-
-      {/* LEFT SIDEBAR */}
-      <aside className="flex w-56 shrink-0 flex-col border-r border-white/10 bg-card/60">
-        {/* Logo */}
-        <div className="flex items-center gap-3 px-4 py-4 border-b border-white/10">
-          <img src="/kingstop-mark.svg" alt="KingStop" className="h-8 w-8" />
-          <div>
-            <p className="text-sm font-semibold leading-none tracking-tight">KingStop</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">Trading intelligence</p>
-          </div>
-        </div>
-
-        {/* Nav items */}
-        <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-          {dashboardSections.map(({ id, label }) => {
-            const Icon = sectionIconMap[id]
-            return (
-            <button
-              key={id}
-              data-tour-target={`nav-${id}`}
-              onClick={() => setActiveTab(id)}
-              className={cn(
-                "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                activeTab === id
-                  ? "bg-primary/15 text-primary"
-                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-              )}
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              {label}
-            </button>
-            )
-          })}
-        </nav>
-
-        {/* Bottom actions */}
-        <div className="border-t border-white/10 px-2 py-3 space-y-0.5">
-          <button
-            onClick={() => setTourOpen(true)}
-            className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
-          >
-            <Sparkles className="h-4 w-4 shrink-0" />
-            Tour
-          </button>
-          <button
-            onClick={() => navigate("/docs")}
-            className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
-          >
-            <BookOpen className="h-4 w-4 shrink-0" />
-            Docs
-          </button>
-          <button
-            onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted/50 hover:text-destructive transition-colors"
-          >
-            <LogOut className="h-4 w-4 shrink-0" />
-            Log out
-          </button>
-        </div>
-      </aside>
+      <CommandPalette
+        enabled={accountPreferences.keyboardShortcutsEnabled}
+        open={commandPaletteOpen}
+        onOpenChange={setCommandPaletteOpen}
+        onNavigate={setActiveTab}
+      />
+      <DashboardNavigation
+        activeSection={activeTab}
+        mobileOpen={mobileNavigationOpen}
+        onMobileOpenChange={setMobileNavigationOpen}
+        onNavigate={setActiveTab}
+        onOpenTour={() => setTourOpen(true)}
+        onOpenDocs={() => navigate(paths.docs)}
+        onLogout={handleLogout}
+      />
 
       {/* RIGHT PANEL */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="shrink-0 border-b border-white/10 bg-background/85 backdrop-blur-md px-6 py-3 flex items-center gap-3 flex-wrap">
+        <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-white/10 bg-background/85 px-3 py-3 backdrop-blur-md sm:gap-3 sm:px-6">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="lg:hidden"
+            onClick={() => setMobileNavigationOpen(true)}
+            title="Open navigation"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
           <div className="grid grid-cols-2 rounded-lg bg-muted p-1">
             {(["live", "backtesting"] as Mode[]).map((item) => (
               <button
@@ -1554,7 +1520,7 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-3 rounded-lg bg-muted p-1" aria-label="Market">
+          <div className="hidden grid-cols-3 rounded-lg bg-muted p-1 sm:grid" aria-label="Market">
             {marketOptions.map((item) => (
               <button
                 key={item.id}
@@ -1569,7 +1535,7 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
               </button>
             ))}
           </div>
-          <div className="relative flex-1 max-w-xs">
+          <div className="relative hidden min-w-44 flex-1 max-w-xs md:block">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               value={searchQuery}
@@ -1583,14 +1549,50 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
             refreshKey={streakRefreshKey}
             onBonusClaimed={handleBonusClaimed}
           />
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => setCommandPaletteOpen(true)}
+            title="Open command palette"
+          >
+            <Command className="h-4 w-4" />
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="ghost" size="icon" title="Account menu">
+                <UserCircle className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>
+                <span className="block truncate">{user?.name || "Trader"}</span>
+                <span className="mt-1 block truncate text-xs font-normal text-muted-foreground">{user?.email}</span>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => setActiveTab("settings")}>
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => navigate(paths.docs)}>
+                <BookOpen className="mr-2 h-4 w-4" />
+                Docs
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Log out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <div className="hidden items-center gap-2 text-sm text-muted-foreground xl:flex">
             <Clock className="h-4 w-4" />
             {time.toLocaleTimeString("en-US", { hour12: false })}
           </div>
         </header>
 
         <main ref={mainScrollRef} className="flex-1 overflow-y-auto">
-        <div className="space-y-5 px-6 py-5">
+        <div className="space-y-5 px-3 py-4 sm:px-6 sm:py-5">
         {activeTab === "overview" && (
           <>
         <section className="grid gap-4 xl:grid-cols-[1.45fr_0.55fr]">
@@ -2546,6 +2548,42 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
                   <p className="text-sm text-muted-foreground">
                     These preferences are stored per user through the account API, with local storage used only as a UI fallback.
                   </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-white/10 bg-card/70">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Command className="h-4 w-4 text-primary" />
+                    Keyboard shortcuts
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <label className="flex items-center justify-between gap-4 rounded-lg border border-white/10 bg-background/60 px-4 py-3 text-sm">
+                    <span>Enable global navigation shortcuts</span>
+                    <input
+                      type="checkbox"
+                      checked={accountPreferences.keyboardShortcutsEnabled}
+                      onChange={(event) => void updateAccountPreference("keyboardShortcutsEnabled", event.target.checked)}
+                      className="h-4 w-4 accent-primary"
+                    />
+                  </label>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="flex items-center justify-between rounded-md border border-white/10 px-3 py-2 text-sm">
+                      <span>Command palette</span>
+                      <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">Cmd/Ctrl K</kbd>
+                    </div>
+                    <div className="flex items-center justify-between rounded-md border border-white/10 px-3 py-2 text-sm">
+                      <span>Shortcut menu</span>
+                      <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">?</kbd>
+                    </div>
+                    {dashboardNavigationItems.map(({ id, label, shortcut }) => (
+                      <div key={id} className="flex items-center justify-between rounded-md border border-white/10 px-3 py-2 text-sm">
+                        <span>{label}</span>
+                        <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">G {shortcut}</kbd>
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
 

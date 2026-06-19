@@ -28,6 +28,7 @@ class AccountPreferencesRequest(BaseModel):
     resolutionAlerts: Optional[bool] = None
     priceAlerts: Optional[bool] = None
     streakReminders: Optional[bool] = None
+    keyboardShortcutsEnabled: Optional[bool] = None
     dailyFundingLimit: Optional[float] = None
     exposureLimit: Optional[float] = None
 
@@ -59,6 +60,7 @@ def _serialize_preferences(preferences: UserAccountPreference):
         "resolutionAlerts": preferences.resolution_alerts,
         "priceAlerts": preferences.price_alerts,
         "streakReminders": preferences.streak_reminders,
+        "keyboardShortcutsEnabled": preferences.keyboard_shortcuts_enabled,
         "dailyFundingLimit": preferences.daily_funding_limit,
         "exposureLimit": preferences.exposure_limit,
     }
@@ -162,6 +164,7 @@ def update_account_preferences(
         "resolutionAlerts": "resolution_alerts",
         "priceAlerts": "price_alerts",
         "streakReminders": "streak_reminders",
+        "keyboardShortcutsEnabled": "keyboard_shortcuts_enabled",
         "dailyFundingLimit": "daily_funding_limit",
         "exposureLimit": "exposure_limit",
     }

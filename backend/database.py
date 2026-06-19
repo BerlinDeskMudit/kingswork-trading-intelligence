@@ -62,6 +62,7 @@ def migrate_sqlite_schema():
             "first_action_completed": "ALTER TABLE user_account_preferences ADD COLUMN first_action_completed BOOLEAN NOT NULL DEFAULT 0",
             "first_action_source": "ALTER TABLE user_account_preferences ADD COLUMN first_action_source VARCHAR(32)",
             "first_action_completed_at": "ALTER TABLE user_account_preferences ADD COLUMN first_action_completed_at DATETIME",
+            "keyboard_shortcuts_enabled": "ALTER TABLE user_account_preferences ADD COLUMN keyboard_shortcuts_enabled BOOLEAN NOT NULL DEFAULT 1",
         }
         statements.extend(
             statement
