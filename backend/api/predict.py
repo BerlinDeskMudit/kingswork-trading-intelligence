@@ -280,6 +280,8 @@ def buy_shares(
     db.add(pos)
     db.commit()
     db.refresh(m)
+    from services.onboarding import mark_first_action
+    mark_first_action(db, current_user.id, "prediction")
 
     return {
         "status": "ok",

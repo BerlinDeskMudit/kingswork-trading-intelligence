@@ -235,6 +235,8 @@ async def execute_trade(
         )
 
     check_achievements(db, current_user.id, "trade", 1, portfolio_id)
+    from services.onboarding import mark_first_action
+    mark_first_action(db, current_user.id, "trade")
     return {"status": "ok", "message": f"{req.side.value} {req.quantity} {req.ticker} @ ${req.price:.2f}"}
 
 

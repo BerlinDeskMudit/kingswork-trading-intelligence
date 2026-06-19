@@ -266,6 +266,34 @@ export async function getAccountSettings() {
   return res.data
 }
 
+export type OnboardingState = {
+  tour: {
+    completed: boolean
+    dismissed: boolean
+    step: number
+  }
+  first_action: {
+    completed: boolean
+    source: "dismissed" | "prediction" | "trade" | null
+    completed_at: string | null
+  }
+}
+
+export async function getOnboardingState() {
+  const res = await api.get<OnboardingState & { status: string }>("/account/onboarding")
+  return res.data
+}
+
+export async function updateOnboardingState(data: Partial<OnboardingState["tour"]>) {
+  const res = await api.put<OnboardingState & { status: string }>("/account/onboarding", data)
+  return res.data
+}
+
+export async function completeFirstAction(source: "dismissed" | "prediction" | "trade") {
+  const res = await api.put<OnboardingState & { status: string }>("/account/first-action", { source })
+  return res.data
+}
+
 export async function updateAccountPreferences(data: Record<string, boolean | number | null>) {
   const res = await api.put("/account/preferences", data)
   return res.data

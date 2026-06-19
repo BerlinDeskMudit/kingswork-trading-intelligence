@@ -51,6 +51,24 @@ def migrate_sqlite_schema():
     if "is_paper" not in portfolio_columns:
         statements.append("ALTER TABLE portfolios ADD COLUMN is_paper BOOLEAN DEFAULT 1")
 
+    if "user_account_preferences" in inspector.get_table_names():
+        preference_columns = {
+            column["name"] for column in inspector.get_columns("user_account_preferences")
+        }
+        preference_migrations = {
+            "onboarding_completed": "ALTER TABLE user_account_preferences ADD COLUMN onboarding_completed BOOLEAN NOT NULL DEFAULT 0",
+            "onboarding_dismissed": "ALTER TABLE user_account_preferences ADD COLUMN onboarding_dismissed BOOLEAN NOT NULL DEFAULT 0",
+            "onboarding_step": "ALTER TABLE user_account_preferences ADD COLUMN onboarding_step INTEGER NOT NULL DEFAULT 0",
+            "first_action_completed": "ALTER TABLE user_account_preferences ADD COLUMN first_action_completed BOOLEAN NOT NULL DEFAULT 0",
+            "first_action_source": "ALTER TABLE user_account_preferences ADD COLUMN first_action_source VARCHAR(32)",
+            "first_action_completed_at": "ALTER TABLE user_account_preferences ADD COLUMN first_action_completed_at DATETIME",
+        }
+        statements.extend(
+            statement
+            for column, statement in preference_migrations.items()
+            if column not in preference_columns
+        )
+
     if not statements:
         return
 

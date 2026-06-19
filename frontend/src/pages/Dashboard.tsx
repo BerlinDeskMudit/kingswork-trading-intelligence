@@ -63,6 +63,7 @@ import AchievementsPanel from "@/components/engagement/AchievementsPanel"
 import DailyChallengesPanel from "@/components/engagement/DailyChallengesPanel"
 import WatchlistPanel from "@/components/WatchlistPanel"
 import FirstVisitWelcome from "@/features/onboarding/FirstVisitWelcome"
+import FirstActionCard from "@/features/onboarding/FirstActionCard"
 import {
   Area,
   AreaChart,
@@ -750,6 +751,7 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
   const [backtestRunId, setBacktestRunId] = useState(0)
   const [challengeRefreshKey, setChallengeRefreshKey] = useState(0)
   const [streakRefreshKey, setStreakRefreshKey] = useState(0)
+  const [firstActionRefreshKey, setFirstActionRefreshKey] = useState(0)
   const [error, setError] = useState("")
   const [tourStep, setTourStep] = useState(0)
   const [tourOpen, setTourOpen] = useState(false)
@@ -1350,6 +1352,7 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
     try {
       const quote = await getPredictMarketQuote(marketId, state.side, cost).catch(() => null)
       const res = await buyPredictShares(marketId, state.side, cost)
+      setFirstActionRefreshKey((value) => value + 1)
       const impact = res.price_impact_pct ?? quote?.quote?.price_impact_pct ?? preview?.impactPct ?? 0
       setPredictMsg((p) => ({
         ...p,
@@ -1667,31 +1670,7 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
           <WatchlistPanel onSelectTicker={setSelectedTicker} />
         </section>
 
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-primary">First action</p>
-              <h2 className="mt-1 text-lg font-semibold">Start with one small, reversible step.</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Preview a prediction, review wallet guardrails, or scan news before placing any trade.
-              </p>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[520px]">
-              <Button onClick={() => setActiveTab("predict")}>
-                <TrendingUpIcon className="mr-2 h-4 w-4" />
-                Predict
-              </Button>
-              <Button variant="outline" onClick={() => setActiveTab("wallet")}>
-                <Wallet className="mr-2 h-4 w-4" />
-                Wallet
-              </Button>
-              <Button variant="ghost" onClick={() => setActiveTab("news")}>
-                <Newspaper className="mr-2 h-4 w-4" />
-                News
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <FirstActionCard refreshKey={firstActionRefreshKey} onNavigate={setActiveTab} />
 
         <section className="grid gap-3 md:grid-cols-3">
           {feedItems.map((item) => {
@@ -2211,7 +2190,7 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
         {activeTab === "portfolio" && (
           <div className="space-y-5">
             <div className="grid gap-5 xl:grid-cols-2">
-              <MultiPortfolioPanel />
+              <MultiPortfolioPanel onTradeExecuted={() => setFirstActionRefreshKey((value) => value + 1)} />
               <div className="space-y-5">
                 <PriceTargetTracker />
                 <TradeCopyPanel />

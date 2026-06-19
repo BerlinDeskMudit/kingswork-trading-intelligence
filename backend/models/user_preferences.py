@@ -34,6 +34,12 @@ class UserAccountPreference(Base):
     streak_reminders = Column(Boolean, default=True)
     daily_funding_limit = Column(Float, nullable=True)
     exposure_limit = Column(Float, nullable=True)
+    onboarding_completed = Column(Boolean, default=False, nullable=False)
+    onboarding_dismissed = Column(Boolean, default=False, nullable=False)
+    onboarding_step = Column(Integer, default=0, nullable=False)
+    first_action_completed = Column(Boolean, default=False, nullable=False)
+    first_action_source = Column(String(32), nullable=True)
+    first_action_completed_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

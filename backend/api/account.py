@@ -11,6 +11,12 @@ from database import get_db
 from models.payments import UserSubscription
 from models.user import User
 from models.user_preferences import UserAccountPreference
+from services.onboarding import (
+    FIRST_ACTION_SOURCES,
+    get_or_create_user_preferences,
+    mark_first_action,
+    serialize_onboarding_state,
+)
 
 router = APIRouter(prefix="/account", tags=["account"])
 
@@ -31,16 +37,18 @@ class PasswordChangeRequest(BaseModel):
     new_password: str
 
 
-def _get_or_create_preferences(db: Session, user_id: int) -> UserAccountPreference:
-    preferences = db.query(UserAccountPreference).filter(UserAccountPreference.user_id == user_id).first()
-    if preferences:
-        return preferences
+class OnboardingUpdateRequest(BaseModel):
+    completed: Optional[bool] = None
+    dismissed: Optional[bool] = None
+    step: Optional[int] = None
 
-    preferences = UserAccountPreference(user_id=user_id)
-    db.add(preferences)
-    db.commit()
-    db.refresh(preferences)
-    return preferences
+
+class FirstActionRequest(BaseModel):
+    source: str
+
+
+def _get_or_create_preferences(db: Session, user_id: int) -> UserAccountPreference:
+    return get_or_create_user_preferences(db, user_id)
 
 
 def _serialize_preferences(preferences: UserAccountPreference):
@@ -74,6 +82,7 @@ def get_account_settings(
             "last_login": current_user.last_login.isoformat() if current_user.last_login else None,
         },
         "preferences": _serialize_preferences(preferences),
+        "onboarding": serialize_onboarding_state(preferences),
         "subscription": {
             "tier": subscription.tier.value if subscription else "FREE",
             "active": bool(subscription.active) if subscription else False,
@@ -94,6 +103,47 @@ def get_account_settings(
             "two_factor": False,
         },
     }
+
+
+@router.get("/onboarding")
+def get_onboarding_state(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    preferences = _get_or_create_preferences(db, current_user.id)
+    return {"status": "ok", **serialize_onboarding_state(preferences)}
+
+
+@router.put("/onboarding")
+def update_onboarding_state(
+    req: OnboardingUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    preferences = _get_or_create_preferences(db, current_user.id)
+    if req.step is not None:
+        if req.step < 0 or req.step > 3:
+            raise HTTPException(status_code=400, detail="Onboarding step must be between 0 and 3")
+        preferences.onboarding_step = req.step
+    if req.completed is not None:
+        preferences.onboarding_completed = req.completed
+    if req.dismissed is not None:
+        preferences.onboarding_dismissed = req.dismissed
+    db.commit()
+    db.refresh(preferences)
+    return {"status": "ok", **serialize_onboarding_state(preferences)}
+
+
+@router.put("/first-action")
+def complete_first_action(
+    req: FirstActionRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if req.source not in FIRST_ACTION_SOURCES:
+        raise HTTPException(status_code=400, detail="Unsupported first action source")
+    preferences = mark_first_action(db, current_user.id, req.source)
+    return {"status": "ok", **serialize_onboarding_state(preferences)}
 
 
 @router.put("/preferences")

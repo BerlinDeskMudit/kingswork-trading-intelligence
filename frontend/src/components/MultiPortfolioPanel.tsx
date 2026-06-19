@@ -36,7 +36,7 @@ interface TradeDraft {
 
 const emptyTradeDraft: TradeDraft = { ticker: "", side: "BUY", quantity: "", price: "" }
 
-export default function MultiPortfolioPanel() {
+export default function MultiPortfolioPanel({ onTradeExecuted }: { onTradeExecuted?: () => void }) {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([])
   const [expanded, setExpanded] = useState<number | null>(null)
   const [detail, setDetail] = useState<Record<number, Portfolio>>({})
@@ -68,12 +68,17 @@ export default function MultiPortfolioPanel() {
   const execTrade = async (id: number) => {
     const t = trade[id]
     if (!t?.ticker || !t?.quantity || !t?.price) return
-    await api.post(`/portfolio/portfolios/${id}/trade`, {
-      ticker: t.ticker.toUpperCase(),
-      side: t.side || "BUY",
-      quantity: parseFloat(t.quantity),
-      price: parseFloat(t.price),
-    }).catch(() => {})
+    try {
+      await api.post(`/portfolio/portfolios/${id}/trade`, {
+        ticker: t.ticker.toUpperCase(),
+        side: t.side || "BUY",
+        quantity: parseFloat(t.quantity),
+        price: parseFloat(t.price),
+      })
+      onTradeExecuted?.()
+    } catch {
+      return
+    }
     setTrade((prev) => ({ ...prev, [id]: emptyTradeDraft }))
     loadDetail(id)
     load()

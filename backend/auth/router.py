@@ -44,10 +44,10 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
             detail="Email already registered",
         )
 
-    if len(req.password) < 6:
+    if len(req.password) < 8:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password must be at least 6 characters",
+            detail="Password must be at least 8 characters",
         )
 
     user = User(

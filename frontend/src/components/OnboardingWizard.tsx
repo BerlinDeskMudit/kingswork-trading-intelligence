@@ -3,6 +3,7 @@ import { BarChart3, Bell, CheckCircle2, Compass, TrendingUp, Wallet } from "luci
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type { DashboardSectionId } from "@/routes/paths"
+import { getOnboardingState, updateOnboardingState } from "@/services/api"
 
 type TourStep = {
   title: string
@@ -87,7 +88,8 @@ export default function OnboardingWizard({
   const storageKey = `kingstop_product_tour_${userId ?? "anonymous"}`
   const [tourState, setTourState] = useState<PersistedTourState>(() => readTourState(storageKey))
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null)
-  const visible = open || (!tourState.completed && !tourState.dismissed)
+  const [hydrated, setHydrated] = useState(false)
+  const visible = open || (hydrated && !tourState.completed && !tourState.dismissed)
   const activeStep = steps[Math.min(tourState.step, steps.length - 1)]
   const Icon = activeStep.icon
 
@@ -105,12 +107,31 @@ export default function OnboardingWizard({
   const persist = (next: PersistedTourState) => {
     localStorage.setItem(storageKey, JSON.stringify(next))
     setTourState(next)
+    void updateOnboardingState(next).catch(() => undefined)
   }
 
   useEffect(() => {
-    const next = readTourState(storageKey)
-    setTourState(next)
-    if (!next.completed && !next.dismissed) onOpenChange(true)
+    let active = true
+    void getOnboardingState()
+      .then((data) => {
+        if (!active) return
+        const next = { ...defaultTourState, ...data.tour }
+        localStorage.setItem(storageKey, JSON.stringify(next))
+        setTourState(next)
+        if (!next.completed && !next.dismissed) onOpenChange(true)
+      })
+      .catch(() => {
+        if (!active) return
+        const next = readTourState(storageKey)
+        setTourState(next)
+        if (!next.completed && !next.dismissed) onOpenChange(true)
+      })
+      .finally(() => {
+        if (active) setHydrated(true)
+      })
+    return () => {
+      active = false
+    }
   }, [onOpenChange, storageKey])
 
   useEffect(() => {
