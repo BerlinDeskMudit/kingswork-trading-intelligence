@@ -4,6 +4,7 @@ from database import get_db
 from models.portfolio import Portfolio, Position, Trade, OrderSide
 from auth.deps import get_current_user
 from models.user import User
+from services.portfolios import require_user_portfolio
 from typing import Optional
 import math
 
@@ -23,7 +24,12 @@ SECTOR_MAP = {
 
 
 @router.get("/pnl/{portfolio_id}")
-def get_pnl_history(portfolio_id: int, db: Session = Depends(get_db)):
+def get_pnl_history(
+    portfolio_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_user_portfolio(db, current_user.id, portfolio_id)
     trades = (
         db.query(Trade)
         .filter(Trade.portfolio_id == portfolio_id)
@@ -50,7 +56,12 @@ def get_pnl_history(portfolio_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/sector-exposure/{portfolio_id}")
-def get_sector_exposure(portfolio_id: int, db: Session = Depends(get_db)):
+def get_sector_exposure(
+    portfolio_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_user_portfolio(db, current_user.id, portfolio_id)
     positions = db.query(Position).filter(Position.portfolio_id == portfolio_id).all()
     sector_totals: dict = {}
     total_value = 0.0
@@ -66,6 +77,75 @@ def get_sector_exposure(portfolio_id: int, db: Session = Depends(get_db)):
     ]
     result.sort(key=lambda x: x["value"], reverse=True)
     return {"status": "ok", "sectors": result, "total_value": round(total_value, 2)}
+
+
+@router.get("/overview/{portfolio_id}")
+def get_performance_overview(
+    portfolio_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    portfolio = require_user_portfolio(db, current_user.id, portfolio_id)
+    positions = db.query(Position).filter(Position.portfolio_id == portfolio_id).all()
+    trades = db.query(Trade).filter(Trade.portfolio_id == portfolio_id).order_by(Trade.executed_at).all()
+    sell_trades = [trade for trade in trades if trade.side == OrderSide.SELL and trade.pnl is not None]
+    wins = [trade for trade in sell_trades if (trade.pnl or 0) > 0]
+    losses = [trade for trade in sell_trades if (trade.pnl or 0) <= 0]
+
+    positions_value = sum(
+        position.quantity * (position.current_price or position.avg_entry_price)
+        for position in positions
+    )
+    unrealized_pnl = sum(
+        ((position.current_price or position.avg_entry_price) - position.avg_entry_price) * position.quantity
+        for position in positions
+    )
+    realized_pnl = sum(trade.pnl or 0 for trade in sell_trades)
+
+    running_pnl = 0.0
+    equity_curve = []
+    for trade in trades:
+        if trade.side == OrderSide.SELL:
+            running_pnl += trade.pnl or 0
+        equity_curve.append({
+            "date": trade.executed_at.isoformat() if trade.executed_at else None,
+            "value": round(100_000 + running_pnl, 2),
+            "cumulative_pnl": round(running_pnl, 2),
+        })
+
+    sector_totals = {}
+    for position in positions:
+        value = position.quantity * (position.current_price or position.avg_entry_price)
+        sector = SECTOR_MAP.get(position.ticker, "Other")
+        sector_totals[sector] = sector_totals.get(sector, 0.0) + value
+    exposure = [
+        {
+            "category": sector,
+            "value": round(value, 2),
+            "pct": round(value / positions_value * 100, 1) if positions_value else 0,
+        }
+        for sector, value in sorted(sector_totals.items(), key=lambda item: item[1], reverse=True)
+    ]
+
+    return {
+        "status": "ok",
+        "data_source": "paper_portfolio",
+        "portfolio": {"id": portfolio.id, "name": portfolio.name},
+        "summary": {
+            "total_value": round(portfolio.cash + positions_value, 2),
+            "cash": round(portfolio.cash, 2),
+            "positions_value": round(positions_value, 2),
+            "realized_pnl": round(realized_pnl, 2),
+            "unrealized_pnl": round(unrealized_pnl, 2),
+            "total_pnl": round(realized_pnl + unrealized_pnl, 2),
+            "win_rate": round(len(wins) / len(sell_trades) * 100, 1) if sell_trades else 0,
+            "wins": len(wins),
+            "losses": len(losses),
+            "trade_count": len(trades),
+        },
+        "equity_curve": equity_curve,
+        "exposure": exposure,
+    }
 
 
 @router.get("/correlation")

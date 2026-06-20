@@ -23,17 +23,15 @@ from database import get_db
 from models.markets import Market, MarketPosition, MarketStatus
 from models.portfolio import Portfolio
 from models.user import User
+from services.portfolios import get_or_create_user_wallet
 
 router = APIRouter(prefix="/predict", tags=["predict"])
 
 
 # Helpers
 
-def _get_wallet(db: Session) -> Portfolio:
-    w = db.query(Portfolio).filter(Portfolio.name == "KingStop Demo Wallet").first()
-    if not w:
-        raise HTTPException(status_code=404, detail="Demo wallet not found")
-    return w
+def _get_wallet(db: Session, user: User) -> Portfolio:
+    return get_or_create_user_wallet(db, user.id, user.name)
 
 
 def _serialize_market(m: Market, user_id: Optional[int] = None, db: Session = None):
@@ -249,7 +247,7 @@ def buy_shares(
     if m.status != MarketStatus.OPEN:
         raise HTTPException(status_code=400, detail="Market is not open")
 
-    wallet = _get_wallet(db)
+    wallet = _get_wallet(db, current_user)
     if wallet.cash < req.cost:
         raise HTTPException(status_code=400, detail="Insufficient cash")
 
@@ -344,7 +342,7 @@ def sell_shares(
     fee = max(gross_proceeds, 0) * 0.02
     proceeds = max(gross_proceeds - fee, 0)
     proceeds = max(proceeds, 0)
-    wallet = _get_wallet(db)
+    wallet = _get_wallet(db, current_user)
     wallet.cash += proceeds
 
     pos.shares -= req.shares
@@ -391,11 +389,11 @@ def resolve_market(
         MarketPosition.redeemed == False,
     ).all()
 
-    wallet = _get_wallet(db)
     payouts = 0
     for pos in positions:
         if pos.side == winning_side:
             payout = pos.shares * 1.0   # $1 per winning share
+            wallet = get_or_create_user_wallet(db, pos.user_id)
             wallet.cash += payout
             payouts += payout
         pos.redeemed = True

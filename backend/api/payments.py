@@ -18,6 +18,7 @@ from database import get_db
 from models.payments import Payment, PaymentStatus, UserSubscription, SubscriptionTier, TIER_PRICES
 from models.portfolio import Portfolio
 from models.user import User
+from services.portfolios import get_or_create_user_wallet
 
 router = APIRouter(prefix="/payments", tags=["payments"])
 
@@ -27,11 +28,8 @@ if settings.stripe_enabled:
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
-def _get_wallet(db: Session) -> Portfolio:
-    w = db.query(Portfolio).filter(Portfolio.name == "KingStop Demo Wallet").first()
-    if not w:
-        raise HTTPException(status_code=404, detail="Demo wallet not found")
-    return w
+def _get_wallet(db: Session, user_id: int) -> Portfolio:
+    return get_or_create_user_wallet(db, user_id)
 
 
 # ── Buy Virtual Cash ─────────────────────────────────────────────────────────
@@ -197,7 +195,7 @@ async def stripe_webhook(
                 payment.completed_at = datetime.now(timezone.utc)
                 payment.stripe_payment_intent_id = session.get("payment_intent")
 
-                wallet = _get_wallet(db)
+                wallet = _get_wallet(db, payment.user_id)
                 wallet.cash += payment.virtual_cash_amount or 0
                 db.commit()
 

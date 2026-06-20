@@ -68,6 +68,10 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str = ""
     stripe_enabled: bool = False
 
+    groq_api_key: str = ""
+    groq_model: str = "llama-3.3-70b-versatile"
+    groq_timeout_seconds: float = 25.0
+
     ws_host: str = "0.0.0.0"
     ws_port: int = 8000
 
@@ -76,7 +80,7 @@ class Settings(BaseSettings):
     stop_loss_pct: float = 0.05
 
     class Config:
-        env_file = ".env"
+        env_file = (".env", "backend/.env")
 
 
 settings = Settings()

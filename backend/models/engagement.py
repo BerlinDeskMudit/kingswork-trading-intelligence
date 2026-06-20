@@ -1,5 +1,5 @@
 from datetime import date, datetime, timezone
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Date, ForeignKey, Enum
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Date, ForeignKey, Enum, UniqueConstraint
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 import enum
@@ -45,6 +45,7 @@ class UserStreak(Base):
     longest_streak = Column(Integer, default=0)
     last_login_date = Column(Date, nullable=True)
     total_logins = Column(Integer, default=0)
+    total_backtests = Column(Integer, default=0, nullable=False)
     bonus_claimed_today = Column(Boolean, default=False)
     total_bonus_earned = Column(Float, default=0.0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -68,6 +69,9 @@ class Achievement(Base):
 
 class UserAchievement(Base):
     __tablename__ = "user_achievements"
+    __table_args__ = (
+        UniqueConstraint("user_id", "achievement_id", name="uq_user_achievement"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -95,6 +99,14 @@ class DailyChallenge(Base):
 
 class UserDailyChallenge(Base):
     __tablename__ = "user_daily_challenges"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "challenge_id",
+            "challenge_date",
+            name="uq_user_daily_challenge",
+        ),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -192,7 +204,10 @@ def claim_daily_bonus(db_session, user_id: int):
     if streak.current_streak > 30:
         bonus = STREAK_BONUSES[30] + (streak.current_streak - 30) * 500
 
-    wallet = db_session.query(Portfolio).filter(Portfolio.name == "KingStop Demo Wallet").first()
+    wallet = db_session.query(Portfolio).filter(
+        Portfolio.user_id == user_id,
+        Portfolio.is_primary == True,
+    ).first()
     if wallet:
         wallet.cash += bonus
 
@@ -203,91 +218,109 @@ def claim_daily_bonus(db_session, user_id: int):
     return {"streak": streak.current_streak, "bonus": bonus, "total_bonus_earned": streak.total_bonus_earned}
 
 
+def get_achievement_progress(db_session, user_id: int, achievement: Achievement) -> float:
+    from models.portfolio import OrderSide, Portfolio, Position, Trade
+
+    portfolios = db_session.query(Portfolio).filter(Portfolio.user_id == user_id).all()
+    portfolio_ids = [portfolio.id for portfolio in portfolios]
+    trades = db_session.query(Trade).filter(Trade.portfolio_id.in_(portfolio_ids)).all() if portfolio_ids else []
+    streak = db_session.query(UserStreak).filter(UserStreak.user_id == user_id).first()
+
+    if achievement.key == "first_login":
+        return float(streak.total_logins if streak else 0)
+    if achievement.key.startswith("streak_"):
+        return float(streak.longest_streak if streak else 0)
+    if achievement.key in {"first_trade", "trades_10", "trades_50"}:
+        return float(len(trades))
+    if achievement.key in {"profit_1k", "profit_10k"}:
+        return float(sum(
+            trade.pnl or 0
+            for trade in trades
+            if trade.side == OrderSide.SELL
+        ))
+    if achievement.key in {"backtest_5", "backtest_25"}:
+        return float(streak.total_backtests if streak else 0)
+    if achievement.key == "portfolio_1m":
+        totals = []
+        for portfolio in portfolios:
+            positions = db_session.query(Position).filter(Position.portfolio_id == portfolio.id).all()
+            totals.append(portfolio.cash + sum(
+                position.quantity * (position.current_price or position.avg_entry_price)
+                for position in positions
+            ))
+        return float(max(totals, default=0))
+    if achievement.key == "hold_7_days":
+        longest_hold = 0
+        for portfolio in portfolios:
+            positions = db_session.query(Position).filter(Position.portfolio_id == portfolio.id).all()
+            for position in positions:
+                buys = [
+                    trade for trade in trades
+                    if trade.portfolio_id == portfolio.id
+                    and trade.ticker == position.ticker
+                    and trade.side == OrderSide.BUY
+                    and trade.executed_at
+                ]
+                if buys:
+                    first_buy = min(buy.executed_at for buy in buys)
+                    longest_hold = max(longest_hold, (date.today() - first_buy.date()).days)
+        return float(longest_hold)
+    if achievement.key == "win_rate_100":
+        todays_sells = [
+            trade for trade in trades
+            if trade.side == OrderSide.SELL
+            and trade.executed_at
+            and trade.executed_at.date() == date.today()
+        ]
+        if not todays_sells:
+            return 0.0
+        wins = sum(1 for trade in todays_sells if (trade.pnl or 0) > 0)
+        return round(wins / len(todays_sells) * 100, 1)
+    return 0.0
+
+
 def check_achievements(db_session, user_id: int, trigger_type: str, trigger_value, portfolio_id: int = None):
-    from models.portfolio import OrderSide, Portfolio, Trade
-    from models.engagement import UserStreak
+    from models.portfolio import Portfolio, Trade, OrderSide
 
     all_achievements = db_session.query(Achievement).all()
-    unlocked = db_session.query(UserAchievement).filter(UserAchievement.user_id == user_id).all()
-    unlocked_keys = {ua.achievement_id for ua in unlocked}
-
+    unlocked_ids = {
+        row.achievement_id
+        for row in db_session.query(UserAchievement).filter(UserAchievement.user_id == user_id).all()
+    }
     new_achievements = []
 
-    for ach in all_achievements:
-        if ach.id in unlocked_keys:
+    for achievement in all_achievements:
+        if achievement.id in unlocked_ids:
             continue
-
-        earned = False
-
-        if ach.key == "first_login":
-            streak = db_session.query(UserStreak).filter(UserStreak.user_id == user_id).first()
-            earned = streak is not None and streak.total_logins >= 1
-
-        elif ach.key.startswith("streak_"):
-            days = int(ach.key.split("_")[1])
-            streak = db_session.query(UserStreak).filter(UserStreak.user_id == user_id).first()
-            earned = streak is not None and streak.longest_streak >= days
-
-        elif ach.key == "first_trade":
-            count = db_session.query(Trade).filter(Trade.portfolio_id == portfolio_id).count()
-            earned = count >= 1
-
-        elif ach.key == "trades_10":
-            count = db_session.query(Trade).filter(Trade.portfolio_id == portfolio_id).count()
-            earned = count >= 10
-
-        elif ach.key == "trades_50":
-            count = db_session.query(Trade).filter(Trade.portfolio_id == portfolio_id).count()
-            earned = count >= 50
-
-        elif ach.key in {"profit_1k", "profit_10k"}:
-            target = 1_000 if ach.key == "profit_1k" else 10_000
-            realized_profit = sum(
-                trade.pnl or 0
-                for trade in db_session.query(Trade).filter(
-                    Trade.portfolio_id == portfolio_id,
-                    Trade.side == OrderSide.SELL,
-                ).all()
-            )
-            earned = realized_profit >= target
-
-        elif ach.key == "backtest_5":
-            earned = trigger_type == "backtest" and trigger_value >= 5
-
-        elif ach.key == "backtest_25":
-            earned = trigger_type == "backtest" and trigger_value >= 25
-
-        elif ach.key == "portfolio_1m":
-            if portfolio_id:
-                wallet = db_session.query(Portfolio).filter(Portfolio.id == portfolio_id).first()
-                if wallet:
-                    from models.portfolio import Position
-                    positions = db_session.query(Position).filter(Position.portfolio_id == portfolio_id).all()
-                    total = wallet.cash + sum(p.quantity * (p.current_price or p.avg_entry_price) for p in positions)
-                    earned = total >= 1_000_000
-
-        elif ach.key == "win_rate_100":
+        progress = get_achievement_progress(db_session, user_id, achievement)
+        earned = progress >= achievement.requirement_value
+        if achievement.key == "win_rate_100":
+            portfolios = db_session.query(Portfolio).filter(Portfolio.user_id == user_id).all()
+            portfolio_ids = [portfolio.id for portfolio in portfolios]
             todays_sells = [
                 trade
                 for trade in db_session.query(Trade).filter(
-                    Trade.portfolio_id == portfolio_id,
+                    Trade.portfolio_id.in_(portfolio_ids),
                     Trade.side == OrderSide.SELL,
                 ).all()
                 if trade.executed_at and trade.executed_at.date() == date.today()
             ]
-            earned = len(todays_sells) >= 3 and all((trade.pnl or 0) > 0 for trade in todays_sells)
+            earned = len(todays_sells) >= 3 and progress >= 100
 
-        if earned:
-            ua = UserAchievement(user_id=user_id, achievement_id=ach.id)
-            db_session.add(ua)
-            new_achievements.append(ach)
-            wallet = db_session.query(Portfolio).filter(Portfolio.name == "KingStop Demo Wallet").first()
-            if wallet and ach.bonus_cash > 0:
-                wallet.cash += ach.bonus_cash
+        if not earned:
+            continue
+
+        db_session.add(UserAchievement(user_id=user_id, achievement_id=achievement.id))
+        new_achievements.append(achievement)
+        wallet = db_session.query(Portfolio).filter(
+            Portfolio.user_id == user_id,
+            Portfolio.is_primary == True,
+        ).first()
+        if wallet and achievement.bonus_cash > 0:
+            wallet.cash += achievement.bonus_cash
 
     if new_achievements:
         db_session.commit()
-
     return new_achievements
 
 
@@ -385,7 +418,10 @@ def claim_daily_reward(db_session, user_id: int, challenge_id: int):
     if not udc or not udc.completed or udc.reward_claimed:
         return None
 
-    wallet = db_session.query(Portfolio).filter(Portfolio.name == "KingStop Demo Wallet").first()
+    wallet = db_session.query(Portfolio).filter(
+        Portfolio.user_id == user_id,
+        Portfolio.is_primary == True,
+    ).first()
     if wallet:
         wallet.cash += udc.challenge.reward_cash
 

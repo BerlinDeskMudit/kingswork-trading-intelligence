@@ -7,6 +7,7 @@ import {
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Progress } from "@/components/ui/progress"
 import { getAchievements } from "@/services/api.ts"
 import { cn } from "@/lib/utils"
 
@@ -23,11 +24,14 @@ interface Achievement {
   icon: string
   category: string
   bonus_cash: number
+  requirement_value: number
+  progress: number
+  progress_pct: number
   unlocked: boolean
   unlocked_at: string | null
 }
 
-export default function AchievementsPanel() {
+export default function AchievementsPanel({ refreshKey = 0 }: { refreshKey?: number }) {
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [totalUnlocked, setTotalUnlocked] = useState(0)
   const [total, setTotal] = useState(0)
@@ -52,7 +56,7 @@ export default function AchievementsPanel() {
 
   useEffect(() => {
     void loadAchievements()
-  }, [])
+  }, [refreshKey])
 
   return (
     <Card className="h-full border-white/10 bg-card/70">
@@ -96,7 +100,7 @@ export default function AchievementsPanel() {
           {!loading && !achievements.length && !error ? (
             <p className="py-8 text-center text-sm text-muted-foreground">No achievements are configured.</p>
           ) : null}
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          <div className="space-y-2">
             {achievements.map((ach, index) => {
               const Icon = iconMap[ach.icon] || Trophy
               return (
@@ -106,27 +110,31 @@ export default function AchievementsPanel() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: index * 0.03 }}
                   className={cn(
-                    "group relative flex flex-col items-center gap-1 rounded-lg p-3 text-center transition-all",
+                    "group relative flex items-center gap-3 rounded-lg border p-3 text-left transition-colors",
                     ach.unlocked
-                      ? "bg-yellow-500/10 hover:bg-yellow-500/15"
-                      : "bg-muted/30 opacity-50"
+                      ? "border-yellow-500/20 bg-yellow-500/10"
+                      : "border-white/10 bg-background/50"
                   )}
                   title={`${ach.name}: ${ach.description}${ach.unlocked ? "" : " (locked)"}`}
                 >
-                  <Icon
-                    className={cn(
-                      "h-6 w-6",
-                      ach.unlocked ? "text-yellow-400" : "text-muted-foreground"
-                    )}
-                  />
-                  <span className="text-[10px] leading-tight text-muted-foreground">
-                    {ach.unlocked ? ach.name : "???"}
-                  </span>
-                  {ach.unlocked && ach.bonus_cash > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-market-up text-[10px] font-bold text-white">
-                      $
-                    </span>
-                  )}
+                  <div className={cn(
+                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-md",
+                    ach.unlocked ? "bg-yellow-500/15 text-yellow-400" : "bg-muted text-muted-foreground",
+                  )}>
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="truncate text-sm font-medium">{ach.name}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {ach.unlocked
+                          ? ach.bonus_cash > 0 ? `+$${ach.bonus_cash.toLocaleString()}` : "Unlocked"
+                          : `${ach.progress}/${ach.requirement_value}`}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{ach.description}</p>
+                    <Progress value={ach.unlocked ? 100 : ach.progress_pct} className="mt-2 h-1.5" />
+                  </div>
                 </motion.div>
               )
             })}

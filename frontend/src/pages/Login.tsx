@@ -56,7 +56,7 @@ export default function Login() {
       <div className="relative grid min-h-screen lg:grid-cols-[1.05fr_0.95fr]">
         <section className="hidden lg:flex flex-col justify-between border-r border-white/10 p-10 overflow-hidden">
           <Link to="/" className="flex items-center gap-3">
-            <img src="/kingstop-mark.svg" alt="KingStop" className="h-9 w-9" />
+            <img src={`${import.meta.env.BASE_URL}kingstop-mark.svg`} alt="KingStop" className="h-9 w-9" />
             <span className="text-xl font-semibold tracking-tight">KingStop</span>
           </Link>
 
@@ -110,7 +110,7 @@ export default function Login() {
           >
             <div className="mb-8 flex justify-center lg:hidden">
               <Link to="/" className="flex items-center gap-2">
-                <img src="/kingstop-mark.svg" alt="KingStop" className="h-9 w-9" />
+                <img src={`${import.meta.env.BASE_URL}kingstop-mark.svg`} alt="KingStop" className="h-9 w-9" />
                 <span className="text-2xl font-bold tracking-tight">KingStop</span>
               </Link>
             </div>

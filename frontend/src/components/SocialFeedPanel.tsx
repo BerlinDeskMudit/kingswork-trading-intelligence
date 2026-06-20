@@ -3,6 +3,59 @@ import { Heart, MessageCircle, Send, Users } from "lucide-react"
 import { getSocialIdeas, createSocialIdea, likeIdea, getIdeaComments, addIdeaComment } from "@/services/api.ts"
 import { cn } from "@/lib/utils"
 
+const demoIdeas = [
+  {
+    id: -101,
+    ticker: "NVDA",
+    direction: "LONG",
+    entry: 824,
+    target: 872,
+    stop: 798,
+    body: "Holding the breakout setup while volume stays above the 20-day average. I want a clean close over resistance before adding.",
+    likes: 18,
+    risk_reward: 1.85,
+    author: "Test Trader",
+  },
+  {
+    id: -102,
+    ticker: "AAPL",
+    direction: "LONG",
+    entry: 218,
+    target: 232,
+    stop: 210,
+    body: "Watching for a continuation move after the latest strength in mega-cap tech. Position size stays small until breadth confirms.",
+    likes: 11,
+    risk_reward: 1.75,
+    author: "Market Desk",
+  },
+  {
+    id: -103,
+    ticker: "TSLA",
+    direction: "SHORT",
+    entry: 245,
+    target: 228,
+    stop: 253,
+    body: "Short-term momentum is fading. I would only take this if the intraday lower high holds.",
+    likes: 7,
+    risk_reward: 2.13,
+    author: "Risk First",
+  },
+]
+
+const demoComments: Record<number, any[]> = {
+  [-101]: [
+    { id: -1, author: "Alex", body: "I like the volume confirmation requirement." },
+    { id: -2, author: "Sam", body: "Keeping this one on watch for the open." },
+  ],
+  [-102]: [{ id: -3, author: "Maya", body: "Good level. I have 233 as the next supply area." }],
+  [-103]: [{ id: -4, author: "Dev", body: "Needs discipline; this can squeeze quickly." }],
+}
+
+function normalizeIdeas(payload: any): any[] {
+  const rows = Array.isArray(payload?.ideas) ? payload.ideas : Array.isArray(payload) ? payload : []
+  return rows.length ? rows : demoIdeas
+}
+
 export default function SocialFeedPanel() {
   const [ideas, setIdeas] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
@@ -14,8 +67,8 @@ export default function SocialFeedPanel() {
   const refresh = () => {
     setLoading(true)
     getSocialIdeas()
-      .then((d) => setIdeas(d.ideas || []))
-      .catch(() => {})
+      .then((d) => setIdeas(normalizeIdeas(d)))
+      .catch(() => setIdeas(demoIdeas))
       .finally(() => setLoading(false))
   }
 
@@ -23,17 +76,32 @@ export default function SocialFeedPanel() {
 
   const handlePost = async () => {
     if (!form.ticker || !form.body) return
-    await createSocialIdea({
+    const payload = {
       ticker: form.ticker.toUpperCase(),
       direction: form.direction,
       entry: form.entry ? Number(form.entry) : undefined,
       target: form.target ? Number(form.target) : undefined,
       stop: form.stop ? Number(form.stop) : undefined,
       body: form.body,
-    }).catch(() => {})
+    }
+    const created = await createSocialIdea(payload).catch(() => null)
+    if (!created) {
+      setIdeas((current) => [
+        {
+          id: Date.now(),
+          ...payload,
+          likes: 0,
+          risk_reward: payload.entry && payload.target && payload.stop
+            ? Number((Math.abs(payload.target - payload.entry) / Math.max(Math.abs(payload.entry - payload.stop), 0.01)).toFixed(2))
+            : null,
+          author: "Test User",
+        },
+        ...current,
+      ])
+    }
     setForm({ ticker: "", direction: "LONG", entry: "", target: "", stop: "", body: "" })
     setShowForm(false)
-    refresh()
+    if (created) refresh()
   }
 
   const handleLike = async (id: number) => {
@@ -46,7 +114,7 @@ export default function SocialFeedPanel() {
       setExpandedComments((p) => { const n = { ...p }; delete n[id]; return n })
     } else {
       const d = await getIdeaComments(id).catch(() => ({ comments: [] }))
-      setExpandedComments((p) => ({ ...p, [id]: d.comments || [] }))
+      setExpandedComments((p) => ({ ...p, [id]: (d.comments || []).length ? d.comments : (demoComments[id] || []) }))
     }
   }
 

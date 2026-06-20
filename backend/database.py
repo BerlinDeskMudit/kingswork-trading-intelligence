@@ -27,8 +27,8 @@ def init_db():
 
     Base.metadata.create_all(bind=engine)
     migrate_sqlite_schema()
-    ensure_demo_wallet()
     ensure_seed_users()
+    ensure_seed_portfolios()
     seed_achievements()
     seed_daily_challenges()
     seed_test_user_data()
@@ -50,6 +50,8 @@ def migrate_sqlite_schema():
         statements.append("CREATE INDEX IF NOT EXISTS ix_portfolios_user_id ON portfolios (user_id)")
     if "is_paper" not in portfolio_columns:
         statements.append("ALTER TABLE portfolios ADD COLUMN is_paper BOOLEAN DEFAULT 1")
+    if "is_primary" not in portfolio_columns:
+        statements.append("ALTER TABLE portfolios ADD COLUMN is_primary BOOLEAN NOT NULL DEFAULT 0")
 
     if "user_account_preferences" in inspector.get_table_names():
         preference_columns = {
@@ -69,6 +71,11 @@ def migrate_sqlite_schema():
             for column, statement in preference_migrations.items()
             if column not in preference_columns
         )
+
+    if "user_streaks" in inspector.get_table_names():
+        streak_columns = {column["name"] for column in inspector.get_columns("user_streaks")}
+        if "total_backtests" not in streak_columns:
+            statements.append("ALTER TABLE user_streaks ADD COLUMN total_backtests INTEGER NOT NULL DEFAULT 0")
 
     if not statements:
         return
@@ -95,6 +102,39 @@ def ensure_demo_wallet():
         db.commit()
         db.refresh(wallet)
         return wallet
+    finally:
+        db.close()
+
+
+def ensure_seed_portfolios():
+    from models.portfolio import Portfolio
+    from models.user import User
+    from services.portfolios import get_or_create_user_wallet
+
+    db = SessionLocal()
+    try:
+        users = {
+            user.email: user
+            for user in db.query(User).filter(
+                User.email.in_((settings.demo_user_email, settings.test_user_email))
+            ).all()
+        }
+        demo_user = users.get(settings.demo_user_email)
+        test_user = users.get(settings.test_user_email)
+
+        demo_wallet = db.query(Portfolio).filter(
+            Portfolio.name == settings.demo_wallet_name
+        ).first()
+        if demo_wallet and demo_user and demo_wallet.user_id is None:
+            demo_wallet.user_id = demo_user.id
+
+        if test_user:
+            for portfolio in db.query(Portfolio).filter(Portfolio.user_id == None).all():
+                portfolio.user_id = test_user.id
+        db.commit()
+
+        for user in users.values():
+            get_or_create_user_wallet(db, user.id, user.name)
     finally:
         db.close()
 
@@ -184,6 +224,7 @@ def seed_test_user_data():
         UserStreak,
     )
     from models.user import User
+    from models.user_preferences import UserAccountPreference
 
     fixture_progress = {
         "daily_login": 1,
@@ -211,6 +252,15 @@ def seed_test_user_data():
         ).all()
 
         for user in users:
+            preferences = db.query(UserAccountPreference).filter(
+                UserAccountPreference.user_id == user.id
+            ).first()
+            if not preferences:
+                preferences = UserAccountPreference(user_id=user.id)
+                db.add(preferences)
+            preferences.leaderboard_opt_in = True
+            preferences.public_profile = True
+
             streak = db.query(UserStreak).filter(UserStreak.user_id == user.id).first()
             if not streak:
                 db.add(UserStreak(

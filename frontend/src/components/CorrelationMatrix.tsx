@@ -1,89 +1,116 @@
-import React, { useState } from 'react'
-import axios from 'axios'
+import { useState } from "react"
+import axios from "axios"
 
 interface Props {
   tickers?: string[]
   matrix?: number[][]
 }
 
-function cellColor(val: number, isDiag: boolean): string {
-  if (isDiag) return 'rgba(100,100,100,0.2)'
-  if (val > 0.5) return `rgba(34,197,94,${Math.min(val, 1) * 0.7})`
-  if (val < -0.5) return `rgba(239,68,68,${Math.min(Math.abs(val), 1) * 0.7})`
-  return 'rgba(150,150,150,0.15)'
+const demoTickers = ["AAPL", "MSFT", "GOOGL", "NVDA", "JPM"]
+const demoMatrix = [
+  [1, 0.56, 0.48, 0.62, 0.21],
+  [0.56, 1, 0.51, 0.58, 0.24],
+  [0.48, 0.51, 1, 0.46, 0.18],
+  [0.62, 0.58, 0.46, 1, 0.16],
+  [0.21, 0.24, 0.18, 0.16, 1],
+]
+
+function cellColor(value: number, isDiagonal: boolean): string {
+  if (isDiagonal) return "hsl(var(--primary) / 0.16)"
+  if (value > 0.5) return `rgb(34 197 94 / ${Math.min(value, 1) * 0.45})`
+  if (value < -0.5) return `rgb(239 68 68 / ${Math.min(Math.abs(value), 1) * 0.45})`
+  return "hsl(var(--muted) / 0.55)"
 }
 
-export default function CorrelationMatrix({
-  tickers: initTickers = ['AAPL', 'MSFT', 'GOOGL'],
-  matrix: initMatrix = [
-    [1, 0.56, 0.48],
-    [0.56, 1, 0.51],
-    [0.48, 0.51, 1],
-  ],
-}: Props) {
+function normalizeMatrix(payload: unknown) {
+  const tickers = Array.isArray((payload as { tickers?: unknown })?.tickers)
+    ? ((payload as { tickers: unknown[] }).tickers.map(String).filter(Boolean) as string[])
+    : []
+  const matrix = Array.isArray((payload as { matrix?: unknown })?.matrix)
+    ? ((payload as { matrix: unknown[] }).matrix as number[][])
+    : []
+
+  if (!tickers.length || !matrix.length) {
+    return { tickers: demoTickers, matrix: demoMatrix }
+  }
+
+  return { tickers, matrix }
+}
+
+export default function CorrelationMatrix({ tickers: initTickers = demoTickers, matrix: initMatrix = demoMatrix }: Props) {
   const [tickers, setTickers] = useState<string[]>(initTickers)
   const [matrix, setMatrix] = useState<number[][]>(initMatrix)
-  const [input, setInput] = useState(initTickers.join(','))
+  const [input, setInput] = useState(initTickers.join(","))
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
   const load = async () => {
     setLoading(true)
-    setError(null)
+    setNotice(null)
     try {
-      const token = localStorage.getItem('kingstop_token')
-      const { data } = await axios.get('/api/v1/analytics/correlation', {
-        params: { tickers: input.trim(), period: '1mo' },
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      const token = localStorage.getItem("kingstop_token")
+      const { data } = await axios.get("/api/v1/analytics/correlation", {
+        params: { tickers: input.trim(), period: "1mo" },
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       })
-      setTickers(data.tickers)
-      setMatrix(data.matrix)
-    } catch (e: any) {
-      setError(e?.response?.data?.detail ?? 'Failed to load')
+      const normalized = normalizeMatrix(data)
+      setTickers(normalized.tickers)
+      setMatrix(normalized.matrix)
+    } catch {
+      setTickers(demoTickers)
+      setMatrix(demoMatrix)
+      setNotice("Showing sample correlations until market history is available.")
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="p-4 space-y-3">
+    <div className="space-y-3 rounded-lg border border-white/10 bg-card/70 p-4 shadow-ink">
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Correlation Matrix</h2>
+        {notice ? <p className="mt-1 text-xs text-primary">{notice}</p> : null}
+      </div>
+
       <div className="flex gap-2">
         <input
-          className="flex-1 bg-gray-800 border border-gray-600 rounded px-2 py-1 text-sm text-white"
+          className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none ring-offset-background placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
           value={input}
-          onChange={e => setInput(e.target.value)}
-          placeholder="AAPL,MSFT,GOOGL"
+          onChange={(event) => setInput(event.target.value)}
+          placeholder="AAPL,MSFT,GOOGL,NVDA,JPM"
         />
         <button
           onClick={load}
           disabled={loading}
-          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded text-sm text-white"
+          className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
         >
-          {loading ? 'Loading…' : 'Load'}
+          {loading ? "Loading..." : "Load"}
         </button>
       </div>
-      {error && <p className="text-red-400 text-xs">{error}</p>}
-      {tickers.length > 0 && matrix.length > 0 && (
-        <div className="overflow-auto">
-          <table className="text-xs border-collapse">
-            <tbody>
-              {tickers.map((row, i) => (
-                <tr key={row}>
-                  {tickers.map((col, j) => (
+
+      <div className="overflow-auto">
+        <table className="border-collapse text-xs">
+          <tbody>
+            {tickers.map((row, rowIndex) => (
+              <tr key={row}>
+                {tickers.map((col, colIndex) => {
+                  const value = Number(matrix[rowIndex]?.[colIndex] ?? 0)
+                  const safeValue = Number.isFinite(value) ? value : 0
+                  return (
                     <td
                       key={col}
-                      style={{ backgroundColor: cellColor(matrix[i]?.[j] ?? 0, i === j) }}
-                      className="border border-gray-700 px-2 py-1 text-center text-white min-w-[60px]"
+                      style={{ backgroundColor: cellColor(safeValue, rowIndex === colIndex) }}
+                      className="min-w-[60px] border border-white/10 px-2 py-1 text-center text-foreground"
                     >
-                      {i === j ? <span className="font-bold">{row}</span> : (matrix[i]?.[j] ?? 0).toFixed(2)}
+                      {rowIndex === colIndex ? <span className="font-bold text-primary">{row}</span> : safeValue.toFixed(2)}
                     </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }

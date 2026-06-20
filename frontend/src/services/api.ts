@@ -5,6 +5,7 @@ const TOKEN_KEY = "kingstop_token"
 const USER_KEY = "kingstop_user"
 const LEGACY_TOKEN_KEY = "kingswork_token"
 const LEGACY_USER_KEY = "kingswork_user"
+const appBase = import.meta.env.BASE_URL
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -27,7 +28,7 @@ api.interceptors.response.use(
       localStorage.removeItem(USER_KEY)
       localStorage.removeItem(LEGACY_TOKEN_KEY)
       localStorage.removeItem(LEGACY_USER_KEY)
-      window.location.href = "/login"
+      window.location.href = `${appBase}login`
     }
     return Promise.reject(err)
   }
@@ -147,6 +148,11 @@ export async function claimChallengeReward(challengeId: number) {
 
 export async function progressDailyChallenge(requirementType: string) {
   const res = await api.post(`/engagement/daily-challenges/progress?requirement_type=${requirementType}`)
+  return res.data
+}
+
+export async function recordBacktestRun() {
+  const res = await api.post("/engagement/backtests/progress")
   return res.data
 }
 
@@ -305,6 +311,16 @@ export async function changePassword(currentPassword: string, newPassword: strin
     new_password: newPassword,
   })
   return res.data
+}
+
+export type LlmChatMessage = {
+  role: "user" | "assistant"
+  content: string
+}
+
+export async function sendLlmChat(messages: LlmChatMessage[]) {
+  const res = await api.post("/llm-chat", { messages })
+  return res.data as { status: string; model: string; message: LlmChatMessage }
 }
 
 // ── Watchlist ─────────────────────────────────────────────────────────────

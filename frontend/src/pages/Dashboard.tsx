@@ -68,6 +68,7 @@ import FirstVisitWelcome from "@/features/onboarding/FirstVisitWelcome"
 import FirstActionCard from "@/features/onboarding/FirstActionCard"
 import DashboardNavigation from "@/features/navigation/DashboardNavigation"
 import CommandPalette from "@/features/navigation/CommandPalette"
+import LlmChatPanel from "@/features/chat/LlmChatPanel"
 import { dashboardNavigationItems } from "@/features/navigation/navigation-items"
 import {
   DropdownMenu,
@@ -92,6 +93,7 @@ import {
   getTradingModels,
   getWallet,
   progressDailyChallenge,
+  recordBacktestRun,
   runBacktest,
   updateModelPreference,
   getScreener,
@@ -117,7 +119,7 @@ import {
   changePassword,
 } from "@/services/api.ts"
 import { cn, formatPrice, formatVolume } from "@/lib/utils"
-import { paths, type DashboardSectionId } from "@/routes/paths"
+import { dashboardSections, paths, type DashboardSectionId } from "@/routes/paths"
 
 type Mode = "live" | "backtesting"
 type MarketKey = "us" | "nse" | "bse"
@@ -463,6 +465,171 @@ const defaultAccountPreferences: AccountPreferences = {
   exposureLimit: null,
 }
 
+function hoursAgo(hours: number) {
+  return new Date(Date.now() - hours * 60 * 60 * 1000).toISOString()
+}
+
+function demoNewsData(ticker: string) {
+  const normalizedTicker = ticker.trim().toUpperCase() || "AAPL"
+  return {
+    status: "ok",
+    ticker: normalizedTicker,
+    news: [
+      {
+        title: `${normalizedTicker} holds key support as traders watch volume confirmation`,
+        summary: "Demo market desk note: price action is balanced, with buyers defending the latest pullback.",
+        published_at: hoursAgo(0.6),
+        url: "#",
+        provider: "KingStop Demo",
+        sentiment: "positive",
+        confidence: 0.82,
+        score: 2,
+      },
+      {
+        title: `Analysts flag risk controls before the next ${normalizedTicker} breakout attempt`,
+        summary: "Position sizing and stop discipline remain important while intraday volatility stays elevated.",
+        published_at: hoursAgo(2.2),
+        url: "#",
+        provider: "KingStop Demo",
+        sentiment: "neutral",
+        confidence: 0.74,
+        score: 0,
+      },
+      {
+        title: `${normalizedTicker} options flow shows hedging demand into the close`,
+        summary: "Protective activity picked up after a fast move, but spot volume remains above recent averages.",
+        published_at: hoursAgo(5.4),
+        url: "#",
+        provider: "KingStop Demo",
+        sentiment: "negative",
+        confidence: 0.68,
+        score: -1,
+      },
+    ],
+    sentiment_summary: {
+      positive: 1,
+      negative: 1,
+      neutral: 1,
+      score: 1,
+      overall: "positive",
+      trend: "improving",
+    },
+  }
+}
+
+const demoJournalEntries = [
+  {
+    id: -601,
+    ticker: "NVDA",
+    note: "Entered only after price reclaimed VWAP. Need to avoid chasing the first candle next time.",
+    sentiment: "bullish",
+    pnl: 420,
+    created_at: hoursAgo(8),
+  },
+  {
+    id: -602,
+    ticker: "RELIANCE.BO",
+    note: "Watchlist trade. Better confirmation came from volume expansion, not the first resistance touch.",
+    sentiment: "neutral",
+    pnl: null,
+    created_at: hoursAgo(26),
+  },
+  {
+    id: -603,
+    ticker: "TSLA",
+    note: "Cut risk quickly when the thesis failed. Good execution, but entry was early.",
+    sentiment: "bearish",
+    pnl: -135,
+    created_at: hoursAgo(48),
+  },
+]
+
+const demoPredictMarkets: PredictMarket[] = [
+  {
+    id: -501,
+    question: "Will NVDA close above $850 this week?",
+    ticker: "NVDA",
+    condition: "Weekly close",
+    category: "stocks",
+    status: "OPEN",
+    yes_price: 0.62,
+    no_price: 0.38,
+    yes_pct: 62,
+    no_pct: 38,
+    yes_reserve: 152,
+    no_reserve: 248,
+    liquidity: 400,
+    total_volume: 1240,
+    user_position: [
+      {
+        id: -5101,
+        side: "YES",
+        shares: 12.5,
+        avg_price: 0.56,
+        current_price: 0.62,
+        cost_basis: 7,
+        market_value: 7.75,
+        unrealized_pnl: 0.75,
+        payout_if_wins: 12.5,
+      },
+    ],
+    user_exposure: 7,
+    user_market_value: 7.75,
+    user_unrealized_pnl: 0.75,
+  },
+  {
+    id: -502,
+    question: "Will BTC trade above $75,000 before Friday?",
+    ticker: "BTC-USD",
+    condition: "Intraday high",
+    category: "crypto",
+    status: "OPEN",
+    yes_price: 0.44,
+    no_price: 0.56,
+    yes_pct: 44,
+    no_pct: 56,
+    yes_reserve: 252,
+    no_reserve: 198,
+    liquidity: 450,
+    total_volume: 890,
+    user_position: [],
+    user_exposure: 0,
+    user_market_value: 0,
+    user_unrealized_pnl: 0,
+  },
+  {
+    id: -503,
+    question: "Will NIFTY finish the session green?",
+    ticker: "NIFTY",
+    condition: "Session close",
+    category: "india",
+    status: "OPEN",
+    yes_price: 0.53,
+    no_price: 0.47,
+    yes_pct: 53,
+    no_pct: 47,
+    yes_reserve: 212,
+    no_reserve: 238,
+    liquidity: 450,
+    total_volume: 675,
+    user_position: [],
+    user_exposure: 0,
+    user_market_value: 0,
+    user_unrealized_pnl: 0,
+  },
+]
+
+function normalizePredictMarkets(payload: any, category?: string, status?: string): PredictMarket[] {
+  const rows = Array.isArray(payload?.markets) ? payload.markets : Array.isArray(payload) ? payload : []
+  const source = rows.length ? rows : demoPredictMarkets
+  const filtered = source.filter((market: PredictMarket) => {
+    const categoryMatch = !category || market.category === category
+    const statusMatch = !status || market.status === status
+    return categoryMatch && statusMatch
+  })
+  return filtered.length ? filtered : demoPredictMarkets.filter((market) => !status || market.status === status)
+}
+
 const tourSteps = [
   {
     title: "Choose intelligence for each mode",
@@ -732,6 +899,7 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
   })
   const [time, setTime] = useState(new Date())
   const [searchQuery, setSearchQuery] = useState("")
+  const [searchMessage, setSearchMessage] = useState("")
   const [selectedTicker, setSelectedTicker] = useState(() => queryParams.get("ticker")?.toUpperCase() || "NVDA")
   const [period, setPeriod] = useState("6mo")
   const [models, setModels] = useState<TradingModel[]>(fallbackModels)
@@ -751,6 +919,7 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
   const [challengeRefreshKey, setChallengeRefreshKey] = useState(0)
   const [streakRefreshKey, setStreakRefreshKey] = useState(0)
   const [firstActionRefreshKey, setFirstActionRefreshKey] = useState(0)
+  const [achievementRefreshKey, setAchievementRefreshKey] = useState(0)
   const [error, setError] = useState("")
   const [tourStep, setTourStep] = useState(0)
   const [tourOpen, setTourOpen] = useState(false)
@@ -772,6 +941,13 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
   const [newsData, setNewsData] = useState<any>(null)
   const [newsFilter, setNewsFilter] = useState("all")
   const [loadingNews, setLoadingNews] = useState(false)
+  const activeSectionLabel = dashboardSections.find((section) => section.id === activeTab)?.label || "Dashboard"
+  const activeTitleTicker = activeTab === "news" ? newsTicker : activeTab === "overview" || activeTab === "analytics" ? selectedTicker : ""
+  const activePageTitle = `${activeTitleTicker ? `${activeTitleTicker} - ` : ""}${activeSectionLabel}`
+
+  useEffect(() => {
+    document.title = `${activePageTitle} | KingStop`
+  }, [activePageTitle])
 
   // Crypto
   const [cryptoRows, setCryptoRows] = useState<MarketRow[]>([])
@@ -849,7 +1025,7 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
   }, [])
 
   useEffect(() => {
-    if (showFirstVisitWelcome) localStorage.setItem(firstVisitKey, "complete")
+    if (!showFirstVisitWelcome) localStorage.setItem(firstVisitKey, "complete")
   }, [firstVisitKey, showFirstVisitWelcome])
 
   useEffect(() => {
@@ -1049,6 +1225,26 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
     [activeTab, location.hash, location.search, navigate]
   )
 
+  const commitTickerSearch = useCallback(() => {
+    const query = searchQuery.trim().toUpperCase()
+    if (!query) {
+      setSearchMessage("")
+      return
+    }
+    const match = marketRows.find((row) => row.ticker === query)
+      || marketRows.find((row) => row.ticker.includes(query) || row.name.toUpperCase().includes(query))
+
+    if (!match) {
+      setSearchMessage(`No report found for "${query}".`)
+      return
+    }
+
+    setSelectedTicker(match.ticker)
+    setSearchQuery(match.ticker)
+    setSearchMessage("")
+    setActiveTab("overview")
+  }, [marketRows, searchQuery, setActiveTab])
+
   const handleBonusClaimed = (amount: number) => {
     localStorage.setItem("kingstop_bonus_shown", "true")
     setBonusModalOpen(false)
@@ -1120,8 +1316,9 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
   const handleRunBacktest = async () => {
     setBacktestRunId((value) => value + 1)
     try {
-      await progressDailyChallenge("backtest")
+      await Promise.all([progressDailyChallenge("backtest"), recordBacktestRun()])
       setChallengeRefreshKey((value) => value + 1)
+      setAchievementRefreshKey((value) => value + 1)
     } catch {
       // Backtesting still runs if challenge tracking is unavailable.
     }
@@ -1141,8 +1338,8 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
     if (activeTab !== "news") return
     setLoadingNews(true)
     getNews(newsTicker)
-      .then((d) => setNewsData(d))
-      .catch(() => {})
+      .then((data) => setNewsData(data?.news?.length ? data : demoNewsData(newsTicker)))
+      .catch(() => setNewsData(demoNewsData(newsTicker)))
       .finally(() => setLoadingNews(false))
   }, [activeTab, newsTicker])
 
@@ -1183,29 +1380,45 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
     if (activeTab !== "journal") return
     setLoadingJournal(true)
     getJournalEntries()
-      .then((d) => setJournalEntries(d.entries || []))
-      .catch(() => {})
+      .then((data) => setJournalEntries(data?.entries?.length ? data.entries : demoJournalEntries))
+      .catch(() => setJournalEntries(demoJournalEntries))
       .finally(() => setLoadingJournal(false))
   }, [activeTab])
 
   const handleAddJournalEntry = async () => {
     if (!journalTicker || !journalNote) return
-    await createJournalEntry({ ticker: journalTicker, note: journalNote, sentiment: journalSentiment || undefined })
+    const localEntry = {
+      id: Date.now(),
+      ticker: journalTicker.toUpperCase(),
+      note: journalNote,
+      sentiment: journalSentiment || undefined,
+      pnl: null,
+      created_at: new Date().toISOString(),
+    }
+    try {
+      await createJournalEntry({ ticker: journalTicker, note: journalNote, sentiment: journalSentiment || undefined })
+      const data = await getJournalEntries()
+      setJournalEntries(data?.entries?.length ? data.entries : [localEntry, ...demoJournalEntries])
+    } catch {
+      setJournalEntries((current) => [localEntry, ...current])
+    }
     setJournalNote("")
     setJournalTicker("")
     setJournalSentiment("")
-    const d = await getJournalEntries()
-    setJournalEntries(d.entries || [])
   }
 
   const handleDeleteJournalEntry = async (id: number) => {
-    await deleteJournalEntry(id)
+    if (id > 0) await deleteJournalEntry(id).catch(() => undefined)
     setJournalEntries((prev) => prev.filter((e) => e.id !== id))
   }
 
   const refreshPredictMarkets = useCallback(async () => {
-    const d = await getPredictMarkets(predictCategory || undefined, predictStatus || undefined)
-    setPredictMarkets(d.markets || [])
+    try {
+      const data = await getPredictMarkets(predictCategory || undefined, predictStatus || undefined)
+      setPredictMarkets(normalizePredictMarkets(data, predictCategory || undefined, predictStatus || undefined))
+    } catch {
+      setPredictMarkets(normalizePredictMarkets(null, predictCategory || undefined, predictStatus || undefined))
+    }
   }, [predictCategory, predictStatus])
 
   const refreshWallet = async () => {
@@ -1350,6 +1563,42 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
     const preview = market ? previewPredictBuy(market, state) : null
     const cost = parseFloat(state.cost)
     if (!cost || cost <= 0) return
+    if (marketId < 0 && market && preview) {
+      setPredictMarkets((current) => current.map((item) => {
+        if (item.id !== marketId) return item
+        const position: PredictPosition = {
+          id: Date.now(),
+          side: state.side,
+          shares: Number(preview.shares.toFixed(4)),
+          avg_price: Number(preview.avgPrice.toFixed(4)),
+          current_price: Number(preview.selectedPriceAfter.toFixed(4)),
+          cost_basis: cost,
+          market_value: cost,
+          unrealized_pnl: 0,
+          payout_if_wins: Number(preview.shares.toFixed(4)),
+        }
+        const positions = [position, ...(item.user_position || [])]
+        const exposure = (item.user_exposure || 0) + cost
+        return {
+          ...item,
+          yes_price: preview.yesPctAfter / 100,
+          no_price: preview.noPctAfter / 100,
+          yes_pct: Number(preview.yesPctAfter.toFixed(1)),
+          no_pct: Number(preview.noPctAfter.toFixed(1)),
+          total_volume: Number((item.total_volume + cost).toFixed(2)),
+          user_position: positions,
+          user_exposure: exposure,
+          user_market_value: (item.user_market_value || 0) + cost,
+          user_unrealized_pnl: item.user_unrealized_pnl || 0,
+        }
+      }))
+      setFirstActionRefreshKey((value) => value + 1)
+      setPredictMsg((current) => ({
+        ...current,
+        [marketId]: `Bought ${preview.shares.toFixed(4)} ${state.side} demo shares @ $${preview.avgPrice.toFixed(4)}.`,
+      }))
+      return
+    }
     try {
       const quote = await getPredictMarketQuote(marketId, state.side, cost).catch(() => null)
       const res = await buyPredictShares(marketId, state.side, cost)
@@ -1369,6 +1618,29 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
     const requestedShares = parseFloat(predictSelling[marketId]?.[position.id] || String(position.shares))
     if (!requestedShares || requestedShares <= 0) return
     const shares = Math.min(requestedShares, position.shares)
+    if (marketId < 0 || position.id < 0) {
+      const ratio = shares / position.shares
+      const proceeds = position.market_value * ratio
+      setPredictMarkets((current) => current.map((market) => {
+        if (market.id !== marketId) return market
+        const nextPositions = (market.user_position || [])
+          .map((item) => item.id === position.id ? {
+            ...item,
+            shares: Number((item.shares - shares).toFixed(4)),
+            cost_basis: Number((item.cost_basis * (1 - ratio)).toFixed(2)),
+            market_value: Number((item.market_value * (1 - ratio)).toFixed(2)),
+          } : item)
+          .filter((item) => item.shares > 0)
+        return {
+          ...market,
+          user_position: nextPositions,
+          user_exposure: Math.max(0, (market.user_exposure || 0) - proceeds),
+          user_market_value: Math.max(0, (market.user_market_value || 0) - proceeds),
+        }
+      }))
+      setPredictMsg((current) => ({ ...current, [marketId]: `Sold ${shares.toFixed(4)} demo ${position.side} shares for ${formatPrice(proceeds)}.` }))
+      return
+    }
     try {
       const res = await sellPredictShares(marketId, position.id, shares)
       setPredictMsg((p) => ({
@@ -1382,6 +1654,13 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
   }
 
   const handleResolve = async (marketId: number, outcome: "YES" | "NO") => {
+    if (marketId < 0) {
+      setPredictMarkets((current) => current.map((market) => (
+        market.id === marketId ? { ...market, status: outcome === "YES" ? "RESOLVED_YES" : "RESOLVED_NO", resolved_at: new Date().toISOString() } : market
+      )))
+      setPredictMsg((current) => ({ ...current, [marketId]: `Resolved demo market ${outcome}.` }))
+      return
+    }
     try {
       const res = await resolveMarket(marketId, outcome)
       setPredictMsg((p) => ({ ...p, [marketId]: `Resolved ${outcome}. ${formatPrice(res.total_payout)} paid out.` }))
@@ -1421,9 +1700,42 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
       setPredictShowCreate(false)
       setPredictStatus("OPEN")
       const data = await getPredictMarkets(predictCategory || undefined, "OPEN")
-      setPredictMarkets(data.markets || [])
+      setPredictMarkets(normalizePredictMarkets(data, predictCategory || undefined, "OPEN"))
     } catch (e: any) {
-      setPredictMsg((p) => ({ ...p, [-1]: e?.response?.data?.detail || "Create market failed" }))
+      const localMarket: PredictMarket = {
+        id: Date.now(),
+        question: newPredictMarket.question.trim(),
+        category: newPredictMarket.category,
+        ticker: newPredictMarket.ticker.trim() || undefined,
+        condition: newPredictMarket.condition.trim() || undefined,
+        threshold: newPredictMarket.threshold.trim() ? Number(newPredictMarket.threshold) : undefined,
+        status: "OPEN",
+        yes_price: Math.max(5, Math.min(95, probability)) / 100,
+        no_price: 1 - Math.max(5, Math.min(95, probability)) / 100,
+        yes_pct: Math.max(5, Math.min(95, probability)),
+        no_pct: 100 - Math.max(5, Math.min(95, probability)),
+        yes_reserve: Math.max(50, liquidity) * (1 - Math.max(5, Math.min(95, probability)) / 100),
+        no_reserve: Math.max(50, liquidity) * (Math.max(5, Math.min(95, probability)) / 100),
+        liquidity: Math.max(50, liquidity),
+        total_volume: 0,
+        user_position: [],
+        user_exposure: 0,
+        user_market_value: 0,
+        user_unrealized_pnl: 0,
+      }
+      setPredictMarkets((current) => [localMarket, ...current])
+      setPredictMsg((p) => ({ ...p, [localMarket.id]: e?.response?.data?.detail ? `Saved locally: ${e.response.data.detail}` : "Demo market created locally." }))
+      setNewPredictMarket({
+        question: "",
+        category: "stocks",
+        ticker: "",
+        condition: "",
+        threshold: "",
+        initialProbability: "50",
+        liquidity: "200",
+      })
+      setPredictShowCreate(false)
+      setPredictStatus("OPEN")
     } finally {
       setCreatingPredict(false)
     }
@@ -1472,6 +1784,7 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
       <OnboardingWizard
         userId={user?.id}
         open={tourOpen}
+        activeSection={activeTab}
         onOpenChange={setTourOpen}
         onNavigate={setActiveTab}
         onComplete={() => setTourOpen(false)}
@@ -1495,24 +1808,27 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
       {/* RIGHT PANEL */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-white/10 bg-background/85 px-3 py-3 backdrop-blur-md sm:gap-3 sm:px-6">
+        <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-white/10 bg-background/85 px-2 py-2 backdrop-blur-md sm:px-4">
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="lg:hidden"
+            className="h-8 w-8 lg:hidden"
             onClick={() => setMobileNavigationOpen(true)}
             title="Open navigation"
           >
             <Menu className="h-5 w-5" />
           </Button>
+          <div className="min-w-0 flex-1 sm:flex-none sm:min-w-36 sm:max-w-48">
+            <h1 className="truncate text-sm font-semibold leading-tight">{activePageTitle}</h1>
+          </div>
           <div className="grid grid-cols-2 rounded-lg bg-muted p-1">
             {(["live", "backtesting"] as Mode[]).map((item) => (
               <button
                 key={item}
                 onClick={() => setMode(item)}
                 className={cn(
-                  "rounded-md px-4 py-1.5 text-sm font-medium transition-all",
+                  "rounded-md px-3 py-1 text-xs font-medium transition-all",
                   mode === item ? "bg-background text-foreground shadow" : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -1526,7 +1842,7 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
                 key={item.id}
                 onClick={() => setMarket(item.id)}
                 className={cn(
-                  "rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                  "rounded-md px-2.5 py-1 text-xs font-medium transition-all",
                   market === item.id ? "bg-background text-foreground shadow" : "text-muted-foreground hover:text-foreground"
                 )}
                 title={item.description}
@@ -1535,33 +1851,57 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
               </button>
             ))}
           </div>
-          <div className="relative hidden min-w-44 flex-1 max-w-xs md:block">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <form
+            onSubmit={(event) => {
+              event.preventDefault()
+              commitTickerSearch()
+            }}
+            className="relative hidden min-w-36 flex-1 max-w-52 md:block"
+          >
+            <button
+              type="submit"
+              className="absolute left-2 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              title="Search ticker"
+            >
+              <Search className="h-3.5 w-3.5" />
+            </button>
             <input
               value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
+              onChange={(event) => {
+                setSearchQuery(event.target.value)
+                setSearchMessage("")
+              }}
               placeholder="Search ticker"
-              className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm outline-none ring-offset-background focus:ring-2 focus:ring-ring"
+              className="h-8 w-full rounded-md border border-input bg-background pl-9 pr-9 text-xs outline-none ring-offset-background focus:ring-2 focus:ring-ring"
             />
-          </div>
+            {searchQuery ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("")
+                  setSearchMessage("")
+                }}
+                className="absolute right-2 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                title="Clear ticker search"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
+            {searchMessage ? (
+              <div className="absolute left-0 top-9 z-40 w-full rounded-md border border-white/10 bg-background px-3 py-2 text-xs text-muted-foreground shadow-ink">
+                {searchMessage}
+              </div>
+            ) : null}
+          </form>
           <NavbarStreak
             fallback={streakData}
             refreshKey={streakRefreshKey}
             onBonusClaimed={handleBonusClaimed}
           />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => setCommandPaletteOpen(true)}
-            title="Open command palette"
-          >
-            <Command className="h-4 w-4" />
-          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button type="button" variant="ghost" size="icon" title="Account menu">
-                <UserCircle className="h-5 w-5" />
+              <Button type="button" variant="ghost" size="icon" className="h-8 w-8" title="Account menu">
+                <UserCircle className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
@@ -1586,15 +1926,19 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
             </DropdownMenuContent>
           </DropdownMenu>
           <div className="hidden items-center gap-2 text-sm text-muted-foreground xl:flex">
-            <Clock className="h-4 w-4" />
+            <Clock className="h-3.5 w-3.5" />
             {time.toLocaleTimeString("en-US", { hour12: false })}
           </div>
         </header>
 
         <main ref={mainScrollRef} className="flex-1 overflow-y-auto">
         <div className="space-y-5 px-3 py-4 sm:px-6 sm:py-5">
+        {activeTab === "chat" && <LlmChatPanel />}
+
         {activeTab === "overview" && (
           <>
+        <FirstActionCard refreshKey={firstActionRefreshKey} onNavigate={setActiveTab} />
+
         <section className="grid gap-4 xl:grid-cols-[1.45fr_0.55fr]">
           <Card className="h-full border-white/10 bg-card/70">
             <CardContent className="flex h-full flex-col justify-between p-5">
@@ -1617,18 +1961,18 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
                     Live uses {liveModel.short_name}; backtesting uses {backtestModel.short_name}. Change either model in the intelligence panel.
                   </p>
                 </div>
-                <div className="grid min-w-[320px] grid-cols-2 gap-3">
-                  <div className="rounded-lg border border-white/10 bg-background/60 p-4">
+                <div className="grid w-full min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:w-[360px] lg:shrink-0">
+                  <div className="min-w-0 overflow-hidden rounded-lg border border-white/10 bg-background/60 p-4">
                     <p className="text-sm text-muted-foreground">Selected ticker</p>
-                    <p className="mt-2 text-3xl font-bold">{selectedTicker}</p>
+                    <p className="mt-2 break-words text-2xl font-bold leading-tight sm:text-3xl">{selectedTicker}</p>
                     <p className={cn("mt-1 font-mono text-sm", selectedRow.change_pct >= 0 ? "text-market-up" : "text-market-down")}>
                       {percent(selectedRow.change_pct)}
                     </p>
                   </div>
-                  <div className="rounded-lg border border-white/10 bg-background/60 p-4">
+                  <div className="min-w-0 overflow-hidden rounded-lg border border-white/10 bg-background/60 p-4">
                     <p className="text-sm text-muted-foreground">Model confidence</p>
-                    <p className="mt-2 text-3xl font-bold">{Math.round(confidence * 100)}%</p>
-                    <p className="mt-1 text-sm text-muted-foreground">{mode === "live" ? liveModel.short_name : backtestModel.short_name}</p>
+                    <p className="mt-2 text-3xl font-bold leading-tight">{Math.round(confidence * 100)}%</p>
+                    <p className="mt-1 truncate text-sm text-muted-foreground">{mode === "live" ? liveModel.short_name : backtestModel.short_name}</p>
                   </div>
                 </div>
               </div>
@@ -1668,11 +2012,9 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
 
         <section className="grid items-start gap-5 xl:grid-cols-3">
           <DailyChallengesPanel refreshKey={challengeRefreshKey} onRewardClaimed={handleChallengeRewardClaimed} />
-          <AchievementsPanel />
+          <AchievementsPanel refreshKey={achievementRefreshKey} />
           <WatchlistPanel onSelectTicker={setSelectedTicker} />
         </section>
-
-        <FirstActionCard refreshKey={firstActionRefreshKey} onNavigate={setActiveTab} />
 
         <section className="grid gap-3 md:grid-cols-3">
           {feedItems.map((item) => {
@@ -1728,7 +2070,7 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
                           </tr>
                         </thead>
                         <tbody>
-                          {filteredRows.map((row, index) => {
+                          {filteredRows.length ? filteredRows.map((row, index) => {
                             const isUp = row.change_pct >= 0
                             return (
                               <motion.tr
@@ -1759,7 +2101,13 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
                                 </td>
                               </motion.tr>
                             )
-                          })}
+                          }) : (
+                            <tr>
+                              <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                                No report found for "{searchQuery}".
+                              </td>
+                            </tr>
+                          )}
                         </tbody>
                       </table>
                     </div>
@@ -2192,7 +2540,10 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
         {activeTab === "portfolio" && (
           <div className="space-y-5">
             <div className="grid gap-5 xl:grid-cols-2">
-              <MultiPortfolioPanel onTradeExecuted={() => setFirstActionRefreshKey((value) => value + 1)} />
+              <MultiPortfolioPanel onTradeExecuted={() => {
+                setFirstActionRefreshKey((value) => value + 1)
+                setAchievementRefreshKey((value) => value + 1)
+              }} />
               <div className="space-y-5">
                 <PriceTargetTracker />
                 <TradeCopyPanel />
@@ -2580,7 +2931,7 @@ export default function Dashboard({ sectionId }: { sectionId: DashboardSectionId
                     {dashboardNavigationItems.map(({ id, label, shortcut }) => (
                       <div key={id} className="flex items-center justify-between rounded-md border border-white/10 px-3 py-2 text-sm">
                         <span>{label}</span>
-                        <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">G {shortcut}</kbd>
+                        <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">Ctrl {shortcut}</kbd>
                       </div>
                     ))}
                   </div>

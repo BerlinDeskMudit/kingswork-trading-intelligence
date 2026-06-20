@@ -15,6 +15,7 @@ from models.engagement import (
     process_streak_on_login,
     claim_daily_bonus,
     check_achievements,
+    get_achievement_progress,
     get_or_create_daily_challenges,
     update_daily_challenge_progress,
     claim_daily_reward,
@@ -22,13 +23,13 @@ from models.engagement import (
 )
 from models.portfolio import Portfolio
 from models.user import User
+from services.portfolios import get_or_create_user_wallet
 
 router = APIRouter(prefix="/engagement", tags=["engagement"])
 
 
-def get_demo_wallet_id(db: Session) -> int:
-    wallet = db.query(Portfolio).filter(Portfolio.name == "KingStop Demo Wallet").first()
-    return wallet.id if wallet else 1
+def get_user_wallet_id(db: Session, user: User) -> int:
+    return get_or_create_user_wallet(db, user.id, user.name).id
 
 
 @router.get("/streak")
@@ -101,21 +102,29 @@ def get_achievements(
         for ua in db.query(UserAchievement).filter(UserAchievement.user_id == current_user.id).all()
     }
 
+    achievement_rows = []
+    for achievement in all_achievements:
+        raw_progress = get_achievement_progress(db, current_user.id, achievement)
+        progress = min(raw_progress, achievement.requirement_value)
+        achievement_rows.append({
+            "id": achievement.id,
+            "key": achievement.key,
+            "name": achievement.name,
+            "description": achievement.description,
+            "icon": achievement.icon,
+            "category": achievement.category,
+            "bonus_cash": achievement.bonus_cash,
+            "requirement_value": achievement.requirement_value,
+            "progress": progress,
+            "progress_pct": round(
+                min(progress / achievement.requirement_value * 100, 100), 1
+            ) if achievement.requirement_value else 100,
+            "unlocked": achievement.id in unlocked,
+            "unlocked_at": unlocked.get(achievement.id),
+        })
+
     return {
-        "achievements": [
-            {
-                "id": ach.id,
-                "key": ach.key,
-                "name": ach.name,
-                "description": ach.description,
-                "icon": ach.icon,
-                "category": ach.category,
-                "bonus_cash": ach.bonus_cash,
-                "unlocked": ach.id in unlocked,
-                "unlocked_at": unlocked.get(ach.id),
-            }
-            for ach in all_achievements
-        ],
+        "achievements": achievement_rows,
         "total_unlocked": len(unlocked),
         "total_achievements": len(all_achievements),
     }
@@ -126,7 +135,7 @@ def check_user_achievements(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    wallet_id = get_demo_wallet_id(db)
+    wallet_id = get_user_wallet_id(db, current_user)
     streak = db.query(UserStreak).filter(UserStreak.user_id == current_user.id).first()
     streak_val = streak.current_streak if streak else 0
     new_achievements = check_achievements(db, current_user.id, "login", streak_val, wallet_id)
@@ -135,6 +144,37 @@ def check_user_achievements(
         "new_achievements": [
             {"key": a.key, "name": a.name, "bonus_cash": a.bonus_cash}
             for a in new_achievements
+        ],
+    }
+
+
+@router.post("/backtests/progress")
+def record_backtest_progress(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    streak = db.query(UserStreak).filter(UserStreak.user_id == current_user.id).first()
+    if not streak:
+        streak = UserStreak(user_id=current_user.id)
+        db.add(streak)
+    streak.total_backtests = (streak.total_backtests or 0) + 1
+    db.commit()
+    db.refresh(streak)
+
+    wallet_id = get_user_wallet_id(db, current_user)
+    unlocked = check_achievements(
+        db,
+        current_user.id,
+        "backtest",
+        streak.total_backtests,
+        wallet_id,
+    )
+    return {
+        "status": "ok",
+        "total_backtests": streak.total_backtests,
+        "new_achievements": [
+            {"key": achievement.key, "name": achievement.name}
+            for achievement in unlocked
         ],
     }
 

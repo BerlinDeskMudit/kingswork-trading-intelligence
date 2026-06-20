@@ -47,4 +47,4 @@ Backend checks used in this refactor:
 - `python -m py_compile api/account.py api/portfolio.py main.py models/user_preferences.py`
 - API smoke checks for login, account preferences, password change, prediction buy, and paper trade.
 
-There is currently no repository-level Git metadata in this workspace, so commits could not be created. Once the project is under Git, keep changes staged by domain and commit after each green verification gate.
+Keep changes staged by domain and commit only after the relevant verification gates pass. Frontend feature work should normally pass type-checking, unit tests, and the production build; backend changes should at minimum pass syntax compilation and targeted API smoke checks.

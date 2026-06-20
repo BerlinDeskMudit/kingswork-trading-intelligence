@@ -60,7 +60,7 @@ export default function Signup() {
         <div className="flex items-center gap-2 mb-8 justify-center">
           <div className="flex items-center gap-2">
             <Link to="/" className="flex items-center gap-2">
-              <img src="/kingstop-mark.svg" alt="KingStop" className="h-8 w-8" />
+              <img src={`${import.meta.env.BASE_URL}kingstop-mark.svg`} alt="KingStop" className="h-8 w-8" />
               <span className="font-bold text-xl tracking-tight">KingStop</span>
             </Link>
           </div>

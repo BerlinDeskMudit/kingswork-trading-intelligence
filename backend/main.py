@@ -75,6 +75,7 @@ from api.marketplace import router as marketplace_router
 from api.price_targets import router as price_targets_router
 from api.referral import router as referral_router
 from api.account import router as account_router
+from api.llm_chat import router as llm_chat_router
 
 app.include_router(auth_router, prefix=settings.api_prefix)
 app.include_router(account_router, prefix=settings.api_prefix)
@@ -103,6 +104,7 @@ app.include_router(ai_explain_router, prefix=settings.api_prefix)
 app.include_router(referral_router, prefix=settings.api_prefix)
 app.include_router(marketplace_router, prefix=settings.api_prefix)
 app.include_router(price_targets_router, prefix=settings.api_prefix)
+app.include_router(llm_chat_router, prefix=settings.api_prefix)
 app.include_router(ws_router)
 
 

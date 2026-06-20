@@ -14,6 +14,7 @@ from auth.deps import (
     create_access_token,
     get_current_user,
 )
+from services.portfolios import get_or_create_user_wallet
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -59,8 +60,8 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
 
-    wallet = db.query(Portfolio).filter(Portfolio.name == "KingStop Demo Wallet").first()
-    streak, is_new_day = process_streak_on_login(db, user.id, wallet.id if wallet else 1)
+    wallet = get_or_create_user_wallet(db, user.id, user.name)
+    streak, is_new_day = process_streak_on_login(db, user.id, wallet.id)
     if is_new_day:
         get_or_create_daily_challenges(db, user.id)
         update_daily_challenge_progress(db, user.id, "login")
@@ -93,8 +94,8 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     user.last_login = datetime.now(timezone.utc)
     db.commit()
 
-    wallet = db.query(Portfolio).filter(Portfolio.name == "KingStop Demo Wallet").first()
-    streak, is_new_day = process_streak_on_login(db, user.id, wallet.id if wallet else 1)
+    wallet = get_or_create_user_wallet(db, user.id, user.name)
+    streak, is_new_day = process_streak_on_login(db, user.id, wallet.id)
 
     if is_new_day:
         get_or_create_daily_challenges(db, user.id)

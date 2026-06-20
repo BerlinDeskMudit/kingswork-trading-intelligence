@@ -164,7 +164,7 @@ export default function Landing() {
       <nav className="fixed left-0 right-0 top-0 z-50 border-b border-white/10 bg-background/80 px-4 py-3 backdrop-blur-md sm:px-6">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <button onClick={() => navigate("/")} className="flex items-center gap-3">
-            <img src="/kingstop-mark.svg" alt="KingStop" className="h-9 w-9" />
+            <img src={`${import.meta.env.BASE_URL}kingstop-mark.svg`} alt="KingStop" className="h-9 w-9" />
             <span className="text-lg font-semibold tracking-tight">KingStop</span>
           </button>
           <div className="flex items-center gap-2">

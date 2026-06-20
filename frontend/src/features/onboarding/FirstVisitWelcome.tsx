@@ -11,7 +11,7 @@ export default function FirstVisitWelcome({ onComplete }: FirstVisitWelcomeProps
   const reduceMotion = useReducedMotion()
 
   useEffect(() => {
-    const timer = window.setTimeout(onComplete, reduceMotion ? 350 : 1600)
+    const timer = window.setTimeout(onComplete, reduceMotion ? 500 : 2000)
     return () => window.clearTimeout(timer)
   }, [onComplete, reduceMotion])
 
@@ -38,7 +38,7 @@ export default function FirstVisitWelcome({ onComplete }: FirstVisitWelcomeProps
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
           className="flex h-16 w-16 items-center justify-center rounded-lg border border-primary/25 bg-primary/10 shadow-ink"
         >
-          <img src="/kingstop-mark.svg" alt="" className="h-10 w-10" />
+          <img src={`${import.meta.env.BASE_URL}kingstop-mark.svg`} alt="" className="h-10 w-10" />
         </motion.span>
 
         <span className="mt-6 flex text-3xl font-bold sm:text-4xl" aria-label="KingStop">

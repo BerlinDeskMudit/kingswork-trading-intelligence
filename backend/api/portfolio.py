@@ -9,6 +9,7 @@ from auth.deps import get_current_user
 from datetime import datetime
 from pydantic import BaseModel
 from config import settings
+from services.portfolios import get_or_create_user_wallet, require_user_portfolio
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
 
@@ -24,21 +25,6 @@ class TradeRequest(BaseModel):
 class PortfolioCreate(BaseModel):
     name: str
     initial_cash: float = 100000.0
-
-
-def get_or_create_demo_wallet(db: Session) -> Portfolio:
-    wallet = db.query(Portfolio).filter(Portfolio.name == settings.demo_wallet_name).first()
-    if wallet:
-        return wallet
-
-    wallet = Portfolio(
-        name=settings.demo_wallet_name,
-        cash=settings.demo_wallet_initial_cash,
-    )
-    db.add(wallet)
-    db.commit()
-    db.refresh(wallet)
-    return wallet
 
 
 def serialize_portfolio(portfolio: Portfolio, db: Session):
@@ -71,6 +57,9 @@ def serialize_portfolio(portfolio: Portfolio, db: Session):
         "name": portfolio.name,
         "cash": portfolio.cash,
         "total_value": portfolio.cash + positions_value,
+        "user_id": portfolio.user_id,
+        "is_paper": bool(portfolio.is_paper),
+        "is_primary": bool(portfolio.is_primary),
         "is_demo": portfolio.name == settings.demo_wallet_name,
         "positions": position_rows,
         "trades": [
@@ -89,15 +78,25 @@ def serialize_portfolio(portfolio: Portfolio, db: Session):
 
 
 @router.get("/portfolios")
-async def list_portfolios(db: Session = Depends(get_db)):
-    get_or_create_demo_wallet(db)
-    portfolios = db.query(Portfolio).all()
+async def list_portfolios(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    get_or_create_user_wallet(db, current_user.id, current_user.name)
+    portfolios = db.query(Portfolio).filter(Portfolio.user_id == current_user.id).all()
     return {"status": "ok", "portfolios": [serialize_portfolio(portfolio, db) for portfolio in portfolios]}
 
 
 @router.post("/portfolios")
-async def create_portfolio(req: PortfolioCreate, db: Session = Depends(get_db)):
-    portfolio = Portfolio(name=req.name, cash=req.initial_cash)
+async def create_portfolio(
+    req: PortfolioCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    name = req.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Portfolio name is required")
+    portfolio = Portfolio(user_id=current_user.id, name=name[:100], cash=req.initial_cash, is_paper=True)
     db.add(portfolio)
     db.commit()
     db.refresh(portfolio)
@@ -105,8 +104,11 @@ async def create_portfolio(req: PortfolioCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/wallet")
-async def get_demo_wallet(db: Session = Depends(get_db)):
-    wallet = get_or_create_demo_wallet(db)
+async def get_demo_wallet(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    wallet = get_or_create_user_wallet(db, current_user.id, current_user.name)
     return {
         "status": "ok",
         "wallet": serialize_portfolio(wallet, db),
@@ -115,10 +117,12 @@ async def get_demo_wallet(db: Session = Depends(get_db)):
 
 
 @router.get("/portfolios/{portfolio_id}")
-async def get_portfolio(portfolio_id: int, db: Session = Depends(get_db)):
-    portfolio = db.query(Portfolio).filter(Portfolio.id == portfolio_id).first()
-    if not portfolio:
-        raise HTTPException(status_code=404, detail="Portfolio not found")
+async def get_portfolio(
+    portfolio_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    portfolio = require_user_portfolio(db, current_user.id, portfolio_id)
     return {"status": "ok", "portfolio": serialize_portfolio(portfolio, db)}
 
 
@@ -129,9 +133,7 @@ async def execute_trade(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    portfolio = db.query(Portfolio).filter(Portfolio.id == portfolio_id).first()
-    if not portfolio:
-        raise HTTPException(status_code=404, detail="Portfolio not found")
+    portfolio = require_user_portfolio(db, current_user.id, portfolio_id)
 
     cost = req.quantity * req.price
 
@@ -241,7 +243,11 @@ async def execute_trade(
 
 
 @router.get("/backtest/{ticker}")
-async def backtest_ticker(ticker: str, period: str = "6mo", model_id: Optional[str] = None):
+async def backtest_ticker(
+    ticker: str,
+    period: str = "6mo",
+    model_id: Optional[str] = None,
+):
     from main import data_service
     result = await data_service.run_backtest(ticker.upper(), period=period, model_id=model_id)
     return {"status": "ok", **result}

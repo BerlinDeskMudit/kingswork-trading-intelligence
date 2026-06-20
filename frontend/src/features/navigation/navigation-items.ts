@@ -1,6 +1,7 @@
 import {
   BarChart3,
   Bitcoin,
+  Bot,
   CreditCard,
   Filter,
   Globe2,
@@ -17,6 +18,7 @@ import { dashboardSections, type DashboardSectionId } from "@/routes/paths"
 
 const metadata: Record<DashboardSectionId, { icon: LucideIcon; shortcut: string }> = {
   overview: { icon: BarChart3, shortcut: "O" },
+  chat: { icon: Bot, shortcut: "H" },
   screener: { icon: Filter, shortcut: "R" },
   news: { icon: Newspaper, shortcut: "N" },
   crypto: { icon: Bitcoin, shortcut: "C" },

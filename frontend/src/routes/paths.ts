@@ -1,5 +1,6 @@
 export const dashboardSections = [
   { id: "overview", label: "Overview", path: "overview" },
+  { id: "chat", label: "Chat", path: "chat" },
   { id: "screener", label: "Screener", path: "screener" },
   { id: "news", label: "News", path: "news" },
   { id: "crypto", label: "Crypto", path: "crypto" },

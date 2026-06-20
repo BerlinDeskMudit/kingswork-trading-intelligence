@@ -39,14 +39,11 @@ export default function FirstActionCard({ refreshKey, onNavigate }: FirstActionC
 
   return (
     <Card className="border-primary/20 bg-primary/5">
-      <CardContent className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex min-w-0 items-start gap-3">
+      <CardContent className="flex flex-col gap-3 p-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-primary">First action</p>
-            <h2 className="mt-1 text-lg font-semibold">Start with one small, reversible step.</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Preview a prediction, review wallet guardrails, or scan news before placing any trade.
-            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">Choose one low-risk next step.</p>
           </div>
           <Button
             type="button"
@@ -61,15 +58,15 @@ export default function FirstActionCard({ refreshKey, onNavigate }: FirstActionC
         </div>
         <div className="flex items-center gap-2">
           <div className="grid flex-1 gap-2 sm:grid-cols-3 lg:min-w-[520px]">
-            <Button onClick={() => onNavigate("predict")}>
+            <Button size="sm" onClick={() => onNavigate("predict")}>
               <TrendingUp className="mr-2 h-4 w-4" />
               Preview prediction
             </Button>
-            <Button variant="outline" onClick={() => onNavigate("wallet")}>
+            <Button size="sm" variant="outline" onClick={() => onNavigate("wallet")}>
               <Wallet className="mr-2 h-4 w-4" />
               Wallet guardrails
             </Button>
-            <Button variant="ghost" onClick={() => onNavigate("news")}>
+            <Button size="sm" variant="ghost" onClick={() => onNavigate("news")}>
               <Newspaper className="mr-2 h-4 w-4" />
               Scan news
             </Button>

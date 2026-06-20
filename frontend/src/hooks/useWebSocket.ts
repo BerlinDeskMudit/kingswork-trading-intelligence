@@ -35,7 +35,8 @@ export function useWebSocket(ticker: string) {
 
   const connect = (currentTicker: string) => {
     if (unmounted.current) return
-    const ws = new WebSocket(`ws://localhost:8000/ws/${CLIENT_ID}`)
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const ws = new WebSocket(`${protocol}//${window.location.host}/ws/${CLIENT_ID}`)
     wsRef.current = ws
 
     ws.onopen = () => {

@@ -75,12 +75,14 @@ function readTourState(key: string): PersistedTourState {
 export default function OnboardingWizard({
   userId,
   open,
+  activeSection,
   onOpenChange,
   onNavigate,
   onComplete,
 }: {
   userId?: number
   open: boolean
+  activeSection: DashboardSectionId
   onOpenChange: (open: boolean) => void
   onNavigate: (section: DashboardSectionId) => void
   onComplete: () => void
@@ -89,7 +91,7 @@ export default function OnboardingWizard({
   const [tourState, setTourState] = useState<PersistedTourState>(() => readTourState(storageKey))
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null)
   const [hydrated, setHydrated] = useState(false)
-  const visible = open || (hydrated && !tourState.completed && !tourState.dismissed)
+  const visible = open || (hydrated && activeSection === "overview" && !tourState.completed && !tourState.dismissed)
   const activeStep = steps[Math.min(tourState.step, steps.length - 1)]
   const Icon = activeStep.icon
 
@@ -118,13 +120,11 @@ export default function OnboardingWizard({
         const next = { ...defaultTourState, ...data.tour }
         localStorage.setItem(storageKey, JSON.stringify(next))
         setTourState(next)
-        if (!next.completed && !next.dismissed) onOpenChange(true)
       })
       .catch(() => {
         if (!active) return
         const next = readTourState(storageKey)
         setTourState(next)
-        if (!next.completed && !next.dismissed) onOpenChange(true)
       })
       .finally(() => {
         if (active) setHydrated(true)
@@ -132,7 +132,7 @@ export default function OnboardingWizard({
     return () => {
       active = false
     }
-  }, [onOpenChange, storageKey])
+  }, [storageKey])
 
   useEffect(() => {
     if (!visible) return
