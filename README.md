@@ -61,8 +61,8 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for routing, state, data ownership, and e
 ### 1. Start the API
 
 ```bash
-git clone https://github.com/0xMudit/Kingswork-Trading-Intelligence-Platform.git
-cd KingsWork/backend
+git clone https://github.com/0xMudit/kingswork-trading-intelligence.git
+cd kingswork-trading-intelligence/backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -77,7 +77,7 @@ The API is available at [http://localhost:8000](http://localhost:8000) and its i
 In a second terminal:
 
 ```bash
-cd KingsWork/frontend
+cd kingswork-trading-intelligence/frontend
 npm install
 npm run dev
 ```
