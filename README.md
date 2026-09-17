@@ -4,7 +4,7 @@
 
 KingStop brings market monitoring, technical signals, portfolio workflows, backtesting, prediction markets, risk tools, social features, and AI-assisted research into one authenticated dashboard.
 
-[Live application](https://malcomman.duckdns.org/kingswork/dashboard/overview) · [Portfolio](https://malcomman.duckdns.org/muditya/) · [Architecture notes](ARCHITECTURE.md)
+[Live application](https://kingswork-ruddy.vercel.app) · [Portfolio](https://mudityaraghav.vercel.app) · [Architecture notes](ARCHITECTURE.md)
 
 > KingStop is an engineering and educational project. It does not provide financial advice or execute real brokerage trades.
 
@@ -61,7 +61,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for routing, state, data ownership, and e
 ### 1. Start the API
 
 ```bash
-git clone https://github.com/0xMudit/KingsWork.git
+git clone https://github.com/0xMudit/Kingswork-Trading-Intelligence-Platform.git
 cd KingsWork/backend
 python3 -m venv .venv
 source .venv/bin/activate
