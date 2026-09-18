@@ -36,19 +36,39 @@ The backend is organized as domain routers behind a versioned FastAPI surface. T
 
 ## Architecture
 
-```text
-Browser
-  └─ React/Vite application (/kingswork/)
-       ├─ REST requests (/api/v1/*)
-       └─ WebSocket connection (/ws/*)
-            └─ FastAPI application
-                 ├─ Domain routers (market, portfolio, risk, social, account)
-                 ├─ SQLAlchemy models and services
-                 ├─ SQLite / configurable database
-                 └─ Optional Yahoo Finance, Redis, Stripe, and Groq services
+```mermaid
+flowchart LR
+    UI["React 18 + Vite SPA<br/>route guards · lazy pages · Recharts"]
+
+    subgraph API["FastAPI — /api/v1"]
+        R["27 domain routers<br/>auth · stocks · signals · portfolio · predict<br/>payments · alerts · screener · journal · social · watchlist · ..."]
+        WS["WebSocket /ws/{client_id}"]
+    end
+
+    subgraph CORE["Domain core"]
+        SVC["services/<br/>data_service · portfolios · onboarding"]
+        ENG["engines<br/>signals (technical + ML) · risk · backtesting<br/>fusion · alerts · collectors"]
+        ORM["SQLAlchemy models"]
+    end
+
+    DB[("SQLite<br/>configurable DSN")]
+    REDIS[("Redis<br/>USE_REDIS")]
+    YAHOO["Yahoo Finance"]
+    STRIPE["Stripe<br/>STRIPE_ENABLED"]
+    GROQ["Groq<br/>GROQ_API_KEY"]
+
+    UI -->|REST| R
+    UI <-->|realtime| WS
+    R --> SVC --> ENG --> ORM --> DB
+    ENG -.->|optional cache| REDIS
+    ENG -.->|market data| YAHOO
+    R -.->|optional billing| STRIPE
+    R -.->|optional LLM chat| GROQ
 ```
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for routing, state, data ownership, and extension guidance.
+Every optional dependency is **off by default** (`USE_REDIS=false`, `STRIPE_ENABLED=false`, no `GROQ_API_KEY` set), so a fresh clone runs against SQLite and deterministic market fixtures with no external services required.
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for routing, state ownership, and extension guidance.
 
 ## Quick start
 

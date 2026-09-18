@@ -26,11 +26,25 @@ The backend is FastAPI with SQLAlchemy and SQLite by default. `backend/main.py` 
 
 Core domains:
 
-- `auth`: JWT login/register/profile.
-- `portfolio`: paper portfolios, wallet, trade execution, backtests.
-- `predict`: CPMM prediction markets and positions.
-- `payments`: Stripe Checkout integration, gated by environment variables.
-- `account`: profile settings, notification/privacy preferences, self-set limits, and password changes.
+`main.py` registers the following 27 prefixed routers plus the WebSocket router. Grouped by
+concern, not by registration order:
+
+- **Identity** — `auth`: JWT login/register/profile. `account`: profile settings,
+  notification and privacy preferences, self-set limits, password changes. `referral`.
+- **Market data** — `stocks`, `data`, `news`, `index-compare`, `price-targets`, `watchlist`,
+  `screener`, `marketplace`.
+- **Analysis** — `signals`, `analytics`, `trading-tools`, `trading-models` (`/models`),
+  `ai-explain`, `llm-chat`.
+- **Portfolio and trading** — `portfolio`: paper portfolios, wallet, trade execution,
+  backtests. `broker`. `journal`. `leaderboard`.
+- **Prediction markets** — `predict`: CPMM prediction markets and positions.
+- **Alerts and messaging** — `alerts`, `notifications`, `modes`, `social`, `engagement`.
+- **Billing** — `payments`: Stripe Checkout integration, gated by environment variables.
+- **Realtime** — `websocket` at `/ws/{client_id}`, mounted outside `/api/v1`.
+
+Supporting engines live outside the router layer: `signals/` (technical indicators and an ML
+model), `risk/manager.py`, `backtesting/engine.py`, `fusion/engine.py`, `alerts/engine.py`,
+`collectors/` (Yahoo Finance ingestion), and `services/`. SQLAlchemy models sit in `models/`.
 
 Stripe keys must remain environment variables (`STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_ENABLED`). No keys should be committed.
 
