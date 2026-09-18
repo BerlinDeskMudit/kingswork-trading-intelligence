@@ -41,7 +41,7 @@ flowchart LR
     UI["React 18 + Vite SPA<br/>route guards · lazy pages · Recharts"]
 
     subgraph API["FastAPI — /api/v1"]
-        R["27 domain routers<br/>auth · stocks · signals · portfolio · predict<br/>payments · alerts · screener · journal · social · watchlist · ..."]
+        R["28 domain routers<br/>auth · stocks · signals · portfolio · predict<br/>payments · alerts · screener · journal · social · watchlist · ..."]
         WS["WebSocket /ws/{client_id}"]
     end
 
@@ -140,12 +140,14 @@ npm test
 npm run build
 ```
 
-Backend syntax check:
+Backend tests:
 
 ```bash
 cd backend
-python3 -m compileall -q .
+python -m pytest
 ```
+
+The backend suite covers the risk manager (position sizing, risk scoring, and value-at-risk) and the backtest engine (fills, commission, PnL, and drawdown). CI runs both suites, plus the frontend typecheck and build, on every push and pull request.
 
 ## Project structure
 

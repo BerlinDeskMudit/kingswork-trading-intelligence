@@ -103,20 +103,31 @@ class RiskManager:
     def calculate_var(self, portfolio_value: float, positions: Dict[str, Dict], confidence: float = 0.95) -> float:
         if not positions:
             return 0.0
-        weights = []
-        returns = []
 
-        for ticker, pos in positions.items():
-            weight = pos.get("value", 0) / portfolio_value if portfolio_value > 0 else 0
-            weights.append(weight)
+        entries: List[Tuple[float, List[float]]] = []
+
+        for pos in positions.values():
             hist_returns = pos.get("returns", [0] * 100)
             if len(hist_returns) > 1:
-                returns.append(hist_returns)
+                weight = pos.get("value", 0) / portfolio_value if portfolio_value > 0 else 0
+                entries.append((weight, list(hist_returns)))
 
-        if not returns:
+        if not entries:
             return 0.0
 
-        portfolio_returns = np.dot(np.array(returns).T, np.array(weights))
+        # Return series can differ in length. Align on the most recent common
+        # window so the weight vector and the return matrix keep the same shape;
+        # previously a single short series made np.array() build an inhomogeneous
+        # array (or shifted the weights out of step with the returns) and the
+        # caller got a ValueError instead of a VaR figure.
+        window = min(len(series) for _, series in entries)
+        if window < 2:
+            return 0.0
+
+        weights = np.array([weight for weight, _ in entries])
+        returns = np.array([series[-window:] for _, series in entries])
+
+        portfolio_returns = np.dot(returns.T, weights)
         if len(portfolio_returns) < 2:
             return 0.0
 
