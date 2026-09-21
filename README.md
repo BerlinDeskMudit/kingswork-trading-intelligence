@@ -48,7 +48,7 @@ the whole research-to-trade loop — and a safe place to rehearse it.
 | **Status** | Full-stack platform — CI-verified on every push |
 | **License** | [MIT](./LICENSE) |
 
-![KingStop dashboard overview](assets/screenshots/10-dashboard-overview.png)
+![KingStop dashboard overview](https://files.catbox.moe/amgt68.png)
 
 *The dashboard overview — one sign-in away from paper portfolios, signals, and live market views.*
 
@@ -75,54 +75,54 @@ Full-size captures live in [`assets/screenshots/`](./assets/screenshots/).
 
 | | |
 |---|---|
-| <img src="assets/screenshots/12-login.png" width="420" alt="Login"> | <img src="assets/screenshots/19-signup.png" width="420" alt="Sign up"> |
+| <img src="https://files.catbox.moe/f5hh08.png" width="420" alt="Login"> | <img src="https://files.catbox.moe/8jtx8m.png" width="420" alt="Sign up"> |
 | **Login** — JWT-backed sign-in with bcrypt-hashed credentials and protected-route redirect on 401. | **Sign up** — guided onboarding, preferences, and security settings from day one. |
-| <img src="assets/screenshots/20-product-tour.png" width="420" alt="Product tour"> | |
+| <img src="https://files.catbox.moe/gfn8ey.png" width="420" alt="Product tour"> | |
 | **Product tour** — the guided walkthrough to a user's first paper trade. | |
 
 ### Dashboard & market views
 
 | | |
 |---|---|
-| <img src="assets/screenshots/10-dashboard-overview.png" width="420" alt="Dashboard overview"> | <img src="assets/screenshots/08-market-header.png" width="420" alt="Market header"> |
+| <img src="https://files.catbox.moe/amgt68.png" width="420" alt="Dashboard overview"> | <img src="https://files.catbox.moe/5nhm1x.png" width="420" alt="Market header"> |
 | **Dashboard overview** — URL-driven center of the app: portfolios, signals, and activity at a glance. | **Market header** — live US / NSE / BSE / crypto snapshot with index comparison. |
-| <img src="assets/screenshots/06-intelligence-stack.png" width="420" alt="Intelligence stack"> | |
+| <img src="https://files.catbox.moe/6iplvf.png" width="420" alt="Intelligence stack"> | |
 | **Intelligence stack** — signals, models, and the fusion layer visualized together. | |
 
 ### Portfolio, trading & risk
 
 | | |
 |---|---|
-| <img src="assets/screenshots/15-portfolios.png" width="420" alt="Portfolios"> | <img src="assets/screenshots/01-portfolio-leaderboard.png" width="420" alt="Portfolio leaderboard"> |
+| <img src="https://files.catbox.moe/so0423.png" width="420" alt="Portfolios"> | <img src="https://files.catbox.moe/r5ga1n.png" width="420" alt="Portfolio leaderboard"> |
 | **Portfolios** — paper portfolios, wallet, positions, and trade plans. | **Leaderboard** — community standings, streaks, and achievements. |
-| <img src="assets/screenshots/16-trade-copy.png" width="420" alt="Trade copy"> | <img src="assets/screenshots/14-market-heatmap.png" width="420" alt="Market heatmap"> |
+| <img src="https://files.catbox.moe/dj6ub2.png" width="420" alt="Trade copy"> | <img src="https://files.catbox.moe/oecxq0.png" width="420" alt="Market heatmap"> |
 | **Trade copy** — rehearse moves without real money in the loop. | **Market heatmap** — a visual sweep of sector and ticker exposure. |
-| <img src="assets/screenshots/18-correlation-matrix.png" width="420" alt="Correlation matrix"> | <img src="assets/screenshots/13-price-target-tracker.png" width="420" alt="Price targets"> |
+| <img src="https://files.catbox.moe/q24qqp.png" width="420" alt="Correlation matrix"> | <img src="https://files.catbox.moe/8kkrak.png" width="420" alt="Price targets"> |
 | **Correlation matrix** — pairwise asset correlation for smarter diversification. | **Price targets** — analyst-style targets tracked alongside signals. |
-| <img src="assets/screenshots/17-responsible-use-guardrails.png" width="420" alt="Responsible-use guardrails"> | |
+| <img src="https://files.catbox.moe/ryvqxt.png" width="420" alt="Responsible-use guardrails"> | |
 | **Guardrails** — stop-loss / take-profit defaults and position caps, on by default. | |
 
 ### Signals, markets & prediction
 
 | | |
 |---|---|
-| <img src="assets/screenshots/04-signals-marketplace.png" width="420" alt="Signals marketplace"> | <img src="assets/screenshots/05-prediction-markets.png" width="420" alt="Prediction markets"> |
+| <img src="https://files.catbox.moe/i20j4g.png" width="420" alt="Signals marketplace"> | <img src="https://files.catbox.moe/90emjc.png" width="420" alt="Prediction markets"> |
 | **Signals marketplace** — technical and ML signals browsable like a marketplace. | **Prediction markets** — CPMM markets with auditable resolution. |
 
 ### AI chat & community
 
 | | |
 |---|---|
-| <img src="assets/screenshots/11-groq-powered-chat.png" width="420" alt="Groq-powered chat"> | <img src="assets/screenshots/03-kingstop-chat.png" width="420" alt="KingStop chat"> |
+| <img src="https://files.catbox.moe/zs8p10.png" width="420" alt="Groq-powered chat"> | <img src="https://files.catbox.moe/jupgif.png" width="420" alt="KingStop chat"> |
 | **Groq-powered chat** — fast model responses when `GROQ_API_KEY` is configured. | **KingStop chat** — the in-app market assistant personality. |
-| <img src="assets/screenshots/07-social-feed.png" width="420" alt="Social feed"> | |
+| <img src="https://files.catbox.moe/0hg1hk.png" width="420" alt="Social feed"> | |
 | **Social feed** — trading journal, shared research, and community activity. | |
 
 ### Security & developer reference
 
 | | |
 |---|---|
-| <img src="assets/screenshots/02-security-settings.png" width="420" alt="Security settings"> | <img src="assets/screenshots/09-developer-reference.png" width="420" alt="Developer reference"> |
+| <img src="https://files.catbox.moe/llneq9.png" width="420" alt="Security settings"> | <img src="https://files.catbox.moe/dufmx4.png" width="420" alt="Developer reference"> |
 | **Security settings** — password, preferences, notifications, privacy, and self-set limits. | **Developer reference** — the API surface for building on KingStop. |
 
 ## Architecture
