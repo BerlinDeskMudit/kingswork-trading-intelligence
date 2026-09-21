@@ -1,0 +1,43 @@
+name: Feature request
+description: Suggest an idea for KingStop
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an idea. Please check the
+        [ROADMAP.md](https://github.com/0xMudit/kingswork-trading-intelligence/blob/main/ROADMAP.md)
+        and existing issues first.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What gap does this fill, or what pain does it remove?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the feature and how it should behave.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any workarounds or other approaches you've thought of.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Backend / API
+        - Frontend / UI
+        - Signals / Analytics
+        - Portfolio / Backtesting / Risk
+        - Auth / Security
+        - Docs
+        - Other
+    validations:
+      required: true
