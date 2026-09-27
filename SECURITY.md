@@ -22,10 +22,10 @@ responsibly. **Do not open a public GitHub issue for security vulnerabilities.**
 ### How to report
 
 1. **GitHub Security Advisories** — use the
-   [Security Advisories](https://github.com/0xMudit/kingswork-trading-intelligence/security/advisories/new)
+   [Security Advisories](https://github.com/BerlinDeskMudit/kingswork-trading-intelligence/security/advisories/new)
    feature for private disclosure.
 2. **Email** — contact the maintainer through GitHub's private contact feature
-   on <https://github.com/0xMudit> (click "Security" on the profile page).
+   on <https://github.com/BerlinDeskMudit> (click "Security" on the profile page).
 
 ### What to include
 

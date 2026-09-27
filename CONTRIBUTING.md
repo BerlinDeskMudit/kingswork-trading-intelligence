@@ -32,7 +32,7 @@ you agree to uphold it.
 
 ```sh
 # Clone the repo
-git clone https://github.com/0xMudit/kingswork-trading-intelligence.git
+git clone https://github.com/BerlinDeskMudit/kingswork-trading-intelligence.git
 cd kingswork-trading-intelligence
 
 # Branch for your change
@@ -331,12 +331,12 @@ A pull request is considered complete when:
 ## Finding Things to Work On
 
 - **Good first issues** are tagged
-  [`good first issue`](https://github.com/0xMudit/kingswork-trading-intelligence/labels/good%20first%20issue).
+  [`good first issue`](https://github.com/BerlinDeskMudit/kingswork-trading-intelligence/labels/good%20first%20issue).
 - **Help wanted** issues are tagged
-  [`help wanted`](https://github.com/0xMudit/kingswork-trading-intelligence/labels/help%20wanted).
+  [`help wanted`](https://github.com/BerlinDeskMudit/kingswork-trading-intelligence/labels/help%20wanted).
 - Check the [ROADMAP.md](ROADMAP.md) for planned features.
 - Browse the
-  [open issues](https://github.com/0xMudit/kingswork-trading-intelligence/issues)
+  [open issues](https://github.com/BerlinDeskMudit/kingswork-trading-intelligence/issues)
   for bugs and feature requests.
 
 ### High-impact contribution areas
@@ -354,8 +354,8 @@ A pull request is considered complete when:
 
 ## Getting Help
 
-- **Issues** — [GitHub Issues](https://github.com/0xMudit/kingswork-trading-intelligence/issues)
-- **Discussions** — [GitHub Discussions](https://github.com/0xMudit/kingswork-trading-intelligence/discussions)
-- **Security** — [Security Advisories](https://github.com/0xMudit/kingswork-trading-intelligence/security/advisories/new)
+- **Issues** — [GitHub Issues](https://github.com/BerlinDeskMudit/kingswork-trading-intelligence/issues)
+- **Discussions** — [GitHub Discussions](https://github.com/BerlinDeskMudit/kingswork-trading-intelligence/discussions)
+- **Security** — [Security Advisories](https://github.com/BerlinDeskMudit/kingswork-trading-intelligence/security/advisories/new)
 
 Thank you for helping build open trading infrastructure! 🚀

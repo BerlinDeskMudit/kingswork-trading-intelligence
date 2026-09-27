@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Thanks for suggesting an idea. Please check the
-        [ROADMAP.md](https://github.com/0xMudit/kingswork-trading-intelligence/blob/main/ROADMAP.md)
+        [ROADMAP.md](https://github.com/BerlinDeskMudit/kingswork-trading-intelligence/blob/main/ROADMAP.md)
         and existing issues first.
   - type: textarea
     id: problem

@@ -123,7 +123,7 @@ not.
 
 ## How to suggest features
 
-Open a [Feature Request](https://github.com/0xMudit/kingswork-trading-intelligence/issues/new/choose)
+Open a [Feature Request](https://github.com/BerlinDeskMudit/kingswork-trading-intelligence/issues/new/choose)
 on GitHub with the details of what you'd like to see.
 
 ## How to contribute to roadmap items

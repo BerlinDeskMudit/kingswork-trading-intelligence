@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Thanks for taking the time to fill out this bug report. Please check
-        the [existing issues](https://github.com/0xMudit/kingswork-trading-intelligence/issues?q=is%3Aissue)
+        the [existing issues](https://github.com/BerlinDeskMudit/kingswork-trading-intelligence/issues?q=is%3Aissue)
         first to avoid duplicates.
   - type: textarea
     id: description
